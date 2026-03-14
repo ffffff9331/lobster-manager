@@ -1,0 +1,17 @@
+push graphic-context
+viewbox 0 0 512 512
+fill "#FF5533"
+rectangle 120 200 380 380
+fill "#FF5533"  
+circle 80 170 50 140
+fill "#FF7744"
+ellipse 160 280 50 30 0 0 360
+ellipse 220 280 50 30 0 0 360
+ellipse 280 280 50 30 0 0 360
+ellipse 340 280 50 30 0 0 360
+fill "#FFAA33"
+ellipse 150 330 20 10 0 0 360
+ellipse 210 330 20 10 0 0 360
+ellipse 270 330 20 10 0 0 360
+ellipse 330 330 20 10 0 0 360
+pop graphic-context
