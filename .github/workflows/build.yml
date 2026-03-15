@@ -35,6 +35,10 @@ jobs:
       - name: Build Tauri app
         run: npm run tauri build -- --target aarch64-apple-darwin
 
+      - name: Sign app
+        run: |
+          codesign --force --deep --sign - "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Lobster Manager.app"
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
