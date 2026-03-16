@@ -37,7 +37,7 @@ jobs:
 
       - name: Sign app
         run: |
-          codesign --force --deep --sign - "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Lobster Manager.app"
+          codesign --force --deep --sign - "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/OpenClawManager.app"
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
