@@ -736,10 +736,27 @@ function App() {
       const nodeResult = await invoke<{ success: boolean; output: string }>("run_command", { command: "node --version" });
       const groupPolicyResult = await invoke<{ success: boolean; output: string }>("run_command", { command: "openclaw config get channels.telegram.groupPolicy" });
       
+      // 动态获取操作系统
+      let osInfo = "Unknown";
+      try {
+        const osResult = await invoke<{ success: boolean; output: string }>("run_command", { command: "sw_vers -productVersion" });
+        if (osResult.success) {
+          osInfo = "macOS " + osResult.output.trim();
+        }
+      } catch {
+        // Windows
+        try {
+          const winResult = await invoke<{ success: boolean; output: string }>("run_command", { command: "ver" });
+          if (winResult.success) {
+            osInfo = "Windows " + winResult.output.trim();
+          }
+        } catch {}
+      }
+      
       setSystemInfo({
         openclawVersion: versionResult.success ? versionResult.output.trim() : "未知",
         nodeVersion: nodeResult.success ? nodeResult.output.trim() : "未知",
-        os: "macOS",
+        os: osInfo,
         configPath: "/Users/fan/.openclaw/",
         dataPath: "/Users/fan/.openclaw/"
       });
@@ -1569,23 +1586,38 @@ function App() {
                 <h2>系统诊断</h2>
               </div>
               
-              {/* 系统信息 */}
-              {systemInfo && (
-                <div style={{ marginBottom: '20px', padding: '12px', background: 'var(--bg-hover)', borderRadius: '8px' }}>
-                  <h3 style={{ marginBottom: '12px' }}>系统信息</h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '14px' }}>
-                    <div><strong>操作系统:</strong> {systemInfo.os}</div>
-                    <div><strong>OpenClaw:</strong> {systemInfo.openclawVersion}</div>
-                    <div><strong>Node.js:</strong> {systemInfo.nodeVersion}</div>
-                    <div><strong>配置目录:</strong> {systemInfo.configPath}</div>
-                  </div>
+              {/* 5项检查模块 */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
+                {/* 1. 操作系统 */}
+                <div style={{ padding: '12px', background: 'var(--bg-hover)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>操作系统</div>
+                  <div style={{ fontWeight: 600 }}>{systemInfo?.os || '检测中...'}</div>
                 </div>
-              )}
+                
+                {/* 2. OpenClaw版本 */}
+                <div style={{ padding: '12px', background: 'var(--bg-hover)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>OpenClaw版本</div>
+                  <div style={{ fontWeight: 600 }}>{systemInfo?.openclawVersion || '检测中...'}</div>
+                </div>
+                
+                {/* 3. Node.js版本 */}
+                <div style={{ padding: '12px', background: 'var(--bg-hover)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>Node.js版本</div>
+                  <div style={{ fontWeight: 600 }}>{systemInfo?.nodeVersion || '检测中...'}</div>
+                </div>
+                
+                {/* 4. 配置目录 */}
+                <div style={{ padding: '12px', background: 'var(--bg-hover)', borderRadius: '8px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '4px' }}>配置目录</div>
+                  <div style={{ fontWeight: 600, fontSize: '12px' }}>{systemInfo?.configPath || '检测中...'}</div>
+                </div>
+              </div>
               
+              {/* 5. OpenClaw Doctor */}
               <button 
                 className="btn btn-primary"
                 onClick={runFullDoctor}
-                style={{ marginBottom: '20px' }}
+                style={{ marginBottom: '20px', width: '100%' }}
               >
                 <Terminal size={18} /> 运行 OpenClaw Doctor
               </button>

@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Lobster Manager",
-  "version": "1.0.0",
-  "identifier": "com.openclaw.lobster-manager",
+  "productName": "OpenClawManager",
+  "version": "1.0.1",
+  "identifier": "com.openclaw.manager",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "🦞 龙虾管理助手",
+        "title": "🦞 OpenClaw 管理助手",
         "width": 900,
         "height": 650,
         "minWidth": 700,
