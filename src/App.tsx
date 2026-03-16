@@ -491,6 +491,39 @@ function App() {
     setSystemLoading(null);
   };
 
+  // 打开平台网页
+  const openChannelWeb = async (channel: Channel) => {
+    try {
+      let url = "";
+      if (channel.id === "telegram") {
+        const result = await invoke<{ success: boolean; output: string }>({
+          command: "openclaw config get channels.telegram.botToken"
+        });
+        if (result.success && result.output) {
+          // 从bot token获取chat ID的链接
+          url = "https://web.telegram.org";
+        }
+      } else if (channel.id === "discord") {
+        url = "https://discord.com/channels/@me";
+      } else if (channel.id === "slack") {
+        url = "https://app.slack.com";
+      } else if (channel.id === "whatsapp") {
+        url = "https://web.whatsapp.com";
+      } else if (channel.id === "signal") {
+        alert("Signal 暂不支持网页版，请使用桌面应用");
+        return;
+      } else if (channel.id === "feishu") {
+        url = "https://open.feishu.cn";
+      }
+      
+      if (url) {
+        window.open(url, '_blank');
+      }
+    } catch (e) {
+      console.error("Failed to open channel:", e);
+    }
+  };
+
   // 加载频道状态
   useEffect(() => {
     loadChannelsStatus();
@@ -781,6 +814,11 @@ function App() {
     }
   };
 
+  // 检查更新
+  const checkForUpdates = () => {
+    window.open("https://github.com/ffffff9331/openclaw-manager/releases", "_blank");
+  };
+
   // 打开配置目录
   const openConfigDir = async () => {
     await invoke("run_command", { command: "open ~/.openclaw" });
@@ -835,6 +873,18 @@ function App() {
                       <div className="channel-card-status">
                         {channel.status === "configured" ? "已配置" : "未配置"}
                       </div>
+                      {channel.status === "configured" && channel.enabled && (
+                        <button
+                          className="channel-open-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openChannelWeb(channel);
+                          }}
+                          title="打开对话"
+                        >
+                          打开
+                        </button>
+                      )}
                       <div 
                         className="channel-card-toggle"
                         onClick={(e) => {
@@ -1619,9 +1669,17 @@ function App() {
               <button 
                 className="btn btn-primary"
                 onClick={runFullDoctor}
-                style={{ marginBottom: '20px', width: '100%' }}
+                style={{ marginBottom: '10px', width: '100%' }}
               >
                 <Terminal size={18} /> 运行 OpenClaw Doctor
+              </button>
+              
+              <button 
+                className="btn btn-secondary"
+                onClick={checkForUpdates}
+                style={{ marginBottom: '20px', width: '100%' }}
+              >
+                <RefreshCw size={18} /> 检查更新
               </button>
               
               {/* 诊断结果 */}
