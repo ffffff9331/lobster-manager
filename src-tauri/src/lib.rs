@@ -81,15 +81,28 @@ fn run_command(command: String) -> CommandResult {
 
     // 动态获取用户 PATH，不遗漏任何 npm/bun/volta 安装的全局命令
     let home_dir = env::var("HOME").unwrap_or_else(|_| "/Users/fan".to_string());
-    let full_path = env::var("PATH").unwrap_or_else(|_| {
-        format!(
-            "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{}:{}:{}/.npm-global/bin:{}/.local/bin",
-            home_dir,
-            format!("{}/bin", home_dir),
-            home_dir,
-            home_dir
-        )
-    });
+    // 强制确保 /opt/homebrew/bin 在 PATH 最前面（解决从 Finder 打开时找不到命令的问题）
+    let mut full_path = env::var("PATH").unwrap_or_else(|_| String::new());
+    if !full_path.contains("/opt/homebrew/bin") {
+        full_path = format!("/opt/homebrew/bin:{}", full_path);
+    }
+    // 补充其他常见路径
+    let common_paths = format!(
+        "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{}:{}:{}/.npm-global/bin:{}/.local/bin:{}/.volta/bin:{}/.asdf/shims:{}/.fnm/aliases/default/bin",
+        home_dir,
+        format!("{}/bin", home_dir),
+        home_dir,
+        home_dir,
+        home_dir,
+        home_dir,
+        home_dir
+    );
+    for p in common_paths.split(':') {
+        if !full_path.contains(p) && !p.is_empty() {
+            full_path.push(':');
+            full_path.push_str(p);
+        }
+    }
     
     let output = if cfg!(target_os = "macos") || cfg!(target_os = "linux") {
         Command::new("zsh")
