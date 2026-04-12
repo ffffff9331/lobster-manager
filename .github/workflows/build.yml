@@ -2,49 +2,54 @@ name: Build and Release
 
 on:
   push:
-    branches: [main]
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: '要构建的 tag（例如 v2.0.0-beta）'
+        required: true
+        type: string
 
 jobs:
   build-macos:
     permissions:
       contents: write
     runs-on: macos-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-
-      - name: Add target
-        run: rustup target add aarch64-apple-darwin
+        with:
+          targets: aarch64-apple-darwin
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        run: npm run tauri build -- --target aarch64-apple-darwin
+      - name: Build Tauri macOS bundles
+        run: npm run tauri build -- --target aarch64-apple-darwin --bundles app,dmg
 
-      - name: Sign app
-        run: |
-          codesign --force --deep --sign - "src-tauri/target/aarch64-apple-darwin/release/bundle/macos/OpenClawManager.app"
-
-      - name: Create Release
+      - name: Upload macOS assets to release
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
-          draft: true
-          generate_release_notes: true
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: |
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          draft: false
+          prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
+          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -52,36 +57,40 @@ jobs:
     permissions:
       contents: write
     runs-on: windows-latest
-    if: startsWith(github.ref, 'refs/tags/')
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
-
-      - name: Add target
-        run: rustup target add x86_64-pc-windows-msvc
+        with:
+          targets: x86_64-pc-windows-msvc
 
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        run: npm run tauri build -- --target x86_64-pc-windows-msvc
+      - name: Build Tauri Windows bundles
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc --bundles msi,nsis
 
-      - name: Upload to Release
+      - name: Upload Windows assets to release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
-          draft: true
+          draft: false
+          prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
+          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -89,38 +98,44 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-22.04
-    if: startsWith(github.ref, 'refs/tags/')
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-unknown-linux-gnu
 
       - name: Install Linux deps
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
 
-      - name: Add target
-        run: rustup target add x86_64-unknown-linux-gnu
-
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build Tauri app
-        run: npm run tauri build -- --target x86_64-unknown-linux-gnu
+      - name: Build Tauri Linux bundles
+        run: npm run tauri build -- --target x86_64-unknown-linux-gnu --bundles appimage,deb
 
-      - name: Upload to Release
+      - name: Upload Linux assets to release
         uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
-          draft: true
+          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
+          files: |
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+          draft: false
+          prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
+          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
