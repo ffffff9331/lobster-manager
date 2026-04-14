@@ -49,9 +49,9 @@ function getPlatformPlan() {
   if (typeof navigator === "undefined") {
     return {
       platformLabel: "当前设备",
-      recommendedPlan: "优先按当前设备选择本机运行包，Windows 默认走 WSL2。",
-      primaryAction: "查看部署方案",
-      helper: "首次进入先确认平台，再决定是本机运行还是 WSL2。",
+      recommendedPlan: "优先按当前设备选择 v2 Beta 推荐包，再接入本机或远端实例。",
+      primaryAction: "查看 Beta 接入方式",
+      helper: "先确认平台，再决定是接入本机实例、远端实例，还是走 WSL2。",
     };
   }
 
@@ -61,26 +61,26 @@ function getPlatformPlan() {
   if (platform.includes("mac") || userAgent.includes("mac os")) {
     return {
       platformLabel: "macOS",
-      recommendedPlan: "推荐本机运行包：下载后解压，直接接入本机实例。",
-      primaryAction: "下载并接入本机运行包",
-      helper: "macOS 安装链最短，适合默认做成下载即用。",
+      recommendedPlan: "推荐先下载 v2 Beta（DMG），再接入本机实例或已有实例。",
+      primaryAction: "查看 macOS Beta 接入方式",
+      helper: "macOS 链路最短，适合直接体验 v2 Beta 并继续做本机接入。",
     };
   }
 
   if (platform.includes("win") || userAgent.includes("windows")) {
     return {
       platformLabel: "Windows",
-      recommendedPlan: "推荐 WSL2 运行方案：Manager 在 Windows，OpenClaw runtime 在 WSL2。",
-      primaryAction: "初始化 WSL2 运行环境",
+      recommendedPlan: "推荐 v2 Beta + WSL2 方案：Manager 在 Windows，OpenClaw runtime 在 WSL2。",
+      primaryAction: "查看 Windows Beta / WSL2 方案",
       helper: "先走 WSL2，能避开原生安装的大部分 PATH / 权限 / 服务坑。",
     };
   }
 
   return {
     platformLabel: "Linux",
-    recommendedPlan: "推荐本机运行包：适合本机与轻量服务器。",
-    primaryAction: "下载并接入 Linux 运行包",
-    helper: "Linux 环境最适合直接跑 runtime，本机和服务器都顺手。",
+    recommendedPlan: "推荐先下载 v2 Beta（AppImage），再接入本机或轻量服务器实例。",
+    primaryAction: "查看 Linux Beta 接入方式",
+    helper: "Linux 最适合直接跑 runtime，也适合配合 manager 管理本机和服务器实例。",
   };
 }
 
@@ -388,9 +388,9 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
             <div className="deployment-side-title">推荐方案</div>
             <div className="deployment-side-summary">{platformPlan.recommendedPlan}</div>
             <ul className="deployment-side-list">
-              <li>macOS / Linux：优先本机运行包</li>
-              <li>Windows：默认走 WSL2 runtime</li>
-              <li>已安装用户：首页改看运行状态与修复入口</li>
+              <li>macOS / Linux：优先选择 v2 Beta 推荐包后再接入实例</li>
+              <li>Windows：默认走 v2 Beta + WSL2 runtime</li>
+              <li>已安装用户：首页优先看运行状态、实例状态与修复入口</li>
             </ul>
           </div>
         </div>
