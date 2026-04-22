@@ -8,28 +8,37 @@ use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
 const GATEWAY_SERVICE_LABEL: &str = "ai.openclaw.gateway";
 
+// ─── 跨平台基础工具 ───
+
+fn get_home_dir() -> String {
+    env::var("HOME")
+        .or_else(|_| env::var("USERPROFILE"))
+        .unwrap_or_else(|_| {
+            if cfg!(windows) {
+                format!("C:\\Users\\{}", env::var("USERNAME").unwrap_or_else(|_| "user".into()))
+            } else {
+                "/Users/fan".into()
+            }
+        })
+}
+
 fn get_log_dir() -> PathBuf {
-    let home = env::var("HOME").unwrap_or_else(|_| "/Users/fan".to_string());
-    let log_dir = PathBuf::from(format!("{}/.openclaw/app-logs", home));
+    let home = get_home_dir();
+    let log_dir = PathBuf::from(&home).join(".openclaw").join("app-logs");
     let _ = create_dir_all(&log_dir);
     log_dir
 }
 
 fn get_default_dir() -> PathBuf {
-    env::var("HOME")
-        .map(PathBuf::from)
-        .unwrap_or_else(|_| {
-            if let Ok(entries) = std::fs::read_dir("/Users") {
-                for entry in entries.flatten() {
-                    if let Ok(name) = entry.file_name().into_string() {
-                        if name != "Shared" && name != "Guest" {
-                            return PathBuf::from(format!("/Users/{}", name));
-                        }
-                    }
-                }
-            }
-            PathBuf::from("/Users/fan")
-        })
+    PathBuf::from(get_home_dir())
+}
+
+fn get_openclaw_dir() -> PathBuf {
+    PathBuf::from(get_home_dir()).join(".openclaw")
+}
+
+fn get_state_dir() -> PathBuf {
+    get_openclaw_dir().join("manager-runtime").join("gateway-control").join("state")
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -46,22 +55,19 @@ pub struct CommandResult {
     pub error: Option<String>,
 }
 
+// ─── 跨平台 PATH 构建 ───
+
+#[cfg(not(target_os = "windows"))]
 fn build_shell_path() -> String {
-    let home_dir = env::var("HOME").unwrap_or_else(|_| "/Users/fan".to_string());
-    let mut full_path = env::var("PATH").unwrap_or_else(|_| String::new());
+    let home_dir = get_home_dir();
+    let mut full_path = env::var("PATH").unwrap_or_default();
     if !full_path.contains("/opt/homebrew/bin") {
         full_path = format!("/opt/homebrew/bin:{}", full_path);
     }
 
     let common_paths = format!(
-        "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{}:{}:{}/.npm-global/bin:{}/.local/bin:{}/.volta/bin:{}/.asdf/shims:{}/.fnm/aliases/default/bin",
-        home_dir,
-        format!("{}/bin", home_dir),
-        home_dir,
-        home_dir,
-        home_dir,
-        home_dir,
-        home_dir
+        "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:{home}/bin:{home}/.npm-global/bin:{home}/.local/bin:{home}/.volta/bin:{home}/.asdf/shims:{home}/.fnm/aliases/default/bin",
+        home = home_dir
     );
 
     for p in common_paths.split(':') {
@@ -74,6 +80,36 @@ fn build_shell_path() -> String {
     full_path
 }
 
+#[cfg(target_os = "windows")]
+fn build_shell_path() -> String {
+    let mut full_path = env::var("PATH").unwrap_or_default();
+    let home = get_home_dir();
+    let appdata = env::var("APPDATA").unwrap_or_else(|_| format!("{}\\AppData\\Roaming", home));
+    let localappdata = env::var("LOCALAPPDATA").unwrap_or_else(|_| format!("{}\\AppData\\Local", home));
+    let program_files = env::var("ProgramFiles").unwrap_or_else(|_| "C:\\Program Files".into());
+
+    let extra_paths = [
+        format!("{}\\npm", appdata),
+        format!("{}\\Programs\\nodejs", localappdata),
+        format!("{}\\fnm_multishells", localappdata),
+        format!("{}\\volta\\bin", localappdata),
+        format!("{}\\nodejs", program_files),
+        format!("{}\\Git\\cmd", program_files),
+    ];
+
+    for p in &extra_paths {
+        if !full_path.contains(p.as_str()) {
+            full_path.push(';');
+            full_path.push_str(p);
+        }
+    }
+
+    full_path
+}
+
+// ─── 跨平台命令执行 ───
+
+#[cfg(not(target_os = "windows"))]
 fn run_shell_command(command: &str) -> std::io::Result<std::process::Output> {
     Command::new("zsh")
         .args(["-lc", command])
@@ -82,6 +118,16 @@ fn run_shell_command(command: &str) -> std::io::Result<std::process::Output> {
         .output()
 }
 
+#[cfg(target_os = "windows")]
+fn run_shell_command(command: &str) -> std::io::Result<std::process::Output> {
+    Command::new("cmd")
+        .args(["/C", command])
+        .current_dir(get_default_dir())
+        .env("PATH", build_shell_path())
+        .output()
+}
+
+#[cfg(not(target_os = "windows"))]
 fn dispatch_detached_shell_command(command: &str) -> Result<(), String> {
     let detached = format!("(nohup {} >/dev/null 2>&1 &)", command);
     Command::new("zsh")
@@ -91,6 +137,44 @@ fn dispatch_detached_shell_command(command: &str) -> Result<(), String> {
         .spawn()
         .map(|_| ())
         .map_err(|e| e.to_string())
+}
+
+#[cfg(target_os = "windows")]
+fn dispatch_detached_shell_command(command: &str) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    const CREATE_NO_WINDOW: u32 = 0x08000000;
+    const DETACHED_PROCESS: u32 = 0x00000008;
+
+    Command::new("cmd")
+        .args(["/C", &format!("start /B {}", command)])
+        .current_dir(get_default_dir())
+        .env("PATH", build_shell_path())
+        .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+// ─── 跨平台文件尾部读取 ───
+
+fn read_file_tail(path: &std::path::Path, lines: u32) -> String {
+    if !path.exists() {
+        return String::new();
+    }
+
+    // 优先用纯 Rust 读取，不依赖 tail/zsh
+    match std::fs::read_to_string(path) {
+        Ok(content) => {
+            let all_lines: Vec<&str> = content.lines().collect();
+            let start = if all_lines.len() > lines as usize {
+                all_lines.len() - lines as usize
+            } else {
+                0
+            };
+            all_lines[start..].join("\n")
+        }
+        Err(e) => format!("读取失败: {}", e),
+    }
 }
 
 fn unwrap_output(output: std::io::Result<std::process::Output>) -> Result<String, String> {
@@ -112,6 +196,9 @@ fn unwrap_output(output: std::io::Result<std::process::Output>) -> Result<String
     }
 }
 
+// ─── macOS LaunchAgent 工具（仅 macOS 编译）───
+
+#[cfg(target_os = "macos")]
 fn current_launchctl_target() -> String {
     let uid_output = Command::new("id").args(["-u"]).output();
     let uid = uid_output
@@ -126,12 +213,15 @@ fn current_launchctl_target() -> String {
     }
 }
 
+// ─── Tauri 命令 ───
+
 #[tauri::command]
 fn get_env() -> String {
     format!(
-        "PATH={}\nHOME={}",
+        "PATH={}\nHOME={}\nOS={}",
         env::var("PATH").unwrap_or_default(),
-        env::var("HOME").unwrap_or_default()
+        get_home_dir(),
+        env::consts::OS
     )
 }
 
@@ -153,6 +243,7 @@ fn is_read_only_command(command: &str) -> bool {
         || normalized.starts_with("curl ")
         || normalized.starts_with("sw_vers ")
         || normalized == "ver"
+        || normalized.starts_with("systeminfo")
 }
 
 fn is_gateway_lifecycle_command(command: &str) -> bool {
@@ -167,9 +258,10 @@ fn execute_sync_command(command: &str, log_prefix: &str) -> CommandResult {
         return build_command_result(
             true,
             format!(
-                "PATH={}\nHOME={}",
+                "PATH={}\nHOME={}\nOS={}",
                 env::var("PATH").unwrap_or_default(),
-                env::var("HOME").unwrap_or_default()
+                get_home_dir(),
+                env::consts::OS
             ),
             None,
         );
@@ -180,11 +272,7 @@ fn execute_sync_command(command: &str, log_prefix: &str) -> CommandResult {
         return build_command_result(false, String::new(), Some("Empty command".to_string()));
     }
 
-    let output = if cfg!(target_os = "macos") || cfg!(target_os = "linux") {
-        run_shell_command(command)
-    } else {
-        Command::new("cmd").args(["/C", command]).output()
-    };
+    let output = run_shell_command(command);
 
     match output {
         Ok(out) => {
@@ -294,14 +382,28 @@ fn get_gateway_status() -> GatewayStatus {
     }
 }
 
+// ─── Gateway 控制（跨平台）───
+
+#[cfg(not(target_os = "windows"))]
 fn dispatch_gateway_action(action: &str) -> Result<String, String> {
     let helper = format!(
         "{}/.openclaw/workspace/openclaw-manager/scripts/gateway_control.sh {}",
-        env::var("HOME").unwrap_or_else(|_| "/Users/fan".to_string()),
+        get_home_dir(),
         action
     );
 
     dispatch_detached_shell_command(&helper).map(|_| match action {
+        "start" => "Gateway 启动请求已接受并入队".to_string(),
+        "stop" => "Gateway 停止请求已接受并入队".to_string(),
+        "restart" => "Gateway 重启请求已接受并入队".to_string(),
+        _ => unreachable!(),
+    })
+}
+
+#[cfg(target_os = "windows")]
+fn dispatch_gateway_action(action: &str) -> Result<String, String> {
+    let command = format!("openclaw gateway {}", action);
+    dispatch_detached_shell_command(&command).map(|_| match action {
         "start" => "Gateway 启动请求已接受并入队".to_string(),
         "stop" => "Gateway 停止请求已接受并入队".to_string(),
         "restart" => "Gateway 重启请求已接受并入队".to_string(),
@@ -333,7 +435,9 @@ fn run_doctor(check_type: String) -> String {
         "fix" => "openclaw doctor --fix",
         "deep" => "openclaw doctor --deep",
         "config" => "openclaw config --fix",
-        _ => "echo 'Unknown check type'",
+        _ => {
+            if cfg!(windows) { "echo Unknown check type" } else { "echo 'Unknown check type'" }
+        }
     };
 
     match run_shell_command(command) {
@@ -367,221 +471,166 @@ fn read_app_logs(lines: u32) -> String {
         return "日志文件不存在".to_string();
     }
 
-    let output = Command::new("zsh")
-        .args(["-c", &format!("tail -n {} \"{}\"", lines, log_file.display())])
-        .output();
-
-    match output {
-        Ok(out) => String::from_utf8_lossy(&out.stdout).to_string(),
-        Err(e) => format!("读取失败: {}", e),
-    }
+    read_file_tail(&log_file, lines)
 }
 
 #[tauri::command]
 fn read_doctor_result(lines: u32) -> String {
-    let log_file = PathBuf::from("/tmp/openclaw-manager-doctor.log");
+    let log_dir = get_log_dir();
+    let log_file = log_dir.join("doctor-result.log");
 
     if !log_file.exists() {
-        return "暂无诊断结果，请先运行一次诊断。".to_string();
+        return "Doctor 结果文件不存在".to_string();
     }
 
-    let output = Command::new("zsh")
-        .args(["-c", &format!("tail -n {} \"{}\"", lines, log_file.display())])
-        .output();
-
-    match output {
-        Ok(out) => {
-            let stdout = String::from_utf8_lossy(&out.stdout).to_string();
-            if stdout.trim().is_empty() {
-                "诊断结果文件为空，任务可能仍在执行中。".to_string()
-            } else {
-                stdout
-            }
-        }
-        Err(e) => format!("读取诊断结果失败: {}", e),
-    }
+    read_file_tail(&log_file, lines)
 }
+
+// ─── Gateway 控制状态读取（跨平台）───
 
 #[tauri::command]
 fn read_gateway_control_state() -> String {
-    let home = env::var("HOME").unwrap_or_else(|_| "/Users/fan".to_string());
-    let state_dir = PathBuf::from(format!(
-        "{}/.openclaw/manager-runtime/gateway-control/state",
-        home
-    ));
-    let launch_agent_plist = PathBuf::from(format!(
-        "{}/Library/LaunchAgents/ai.openclaw.gateway-control.plist",
-        home
-    ));
-    let launch_agent_label = "gui/".to_string() + &current_launchctl_target().split('/').nth(1).unwrap_or("") + "/ai.openclaw.gateway-control";
+    let state_dir = get_state_dir();
 
-    let read_state = |name: &str| -> String {
-        let path = state_dir.join(name);
-        std::fs::read_to_string(path)
-            .map(|s| s.trim().to_string())
-            .unwrap_or_default()
+    if !state_dir.exists() {
+        return "{}".to_string();
+    }
+
+    let read_state_file = |name: &str| -> String {
+        std::fs::read_to_string(state_dir.join(name)).unwrap_or_default().trim().to_string()
     };
 
-    let launch_agent_loaded = Command::new("launchctl")
-        .args(["print", &launch_agent_label])
-        .output()
-        .map(|out| out.status.success())
-        .unwrap_or(false);
-
-    let last_launch_agent_action = read_state("last-launch-agent-action.txt");
-    let last_launch_agent_action_name = last_launch_agent_action
-        .split_whitespace()
-        .last()
-        .unwrap_or("");
-    let launch_agent_log_path = if last_launch_agent_action_name.is_empty() {
-        "/tmp/openclaw-manager-launchagent-action.log".to_string()
-    } else {
-        format!("/tmp/openclaw-manager-launchagent-{}.log", last_launch_agent_action_name)
-    };
-    let launch_agent_log = Command::new("zsh")
-        .args(["-lc", &format!("tail -n 20 '{}' 2>/dev/null || true", launch_agent_log_path)])
-        .output()
-        .ok()
-        .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
-        .unwrap_or_default();
-    let launch_agent_error = launch_agent_log
-        .lines()
-        .rev()
-        .find(|line| !line.trim().is_empty())
-        .unwrap_or("")
-        .to_string();
-
-    let (launch_agent_error_kind, launch_agent_recovery_hint) = if launch_agent_error.contains("No such file")
-        || launch_agent_error.contains("not-installed")
-    {
-        (
-            "plist-missing".to_string(),
-            "先执行“安装 LaunchAgent”，再尝试加载。".to_string(),
-        )
-    } else if launch_agent_error.contains("bootstrap failed")
-        || launch_agent_error.contains("Bootstrap failed")
-    {
-        (
-            "bootstrap-failed".to_string(),
-            "检查 plist 内容与 label 是否正确，再重试加载。".to_string(),
-        )
-    } else if launch_agent_error.contains("Input/output error")
-        || launch_agent_error.contains("Operation not permitted")
-        || launch_agent_error.contains("Permission denied")
-    {
-        (
-            "permission-or-io".to_string(),
-            "检查 launchctl 权限、用户域与文件读写权限。".to_string(),
-        )
-    } else if launch_agent_error.contains("already loaded")
-        || launch_agent_error.contains("service already loaded")
-    {
-        (
-            "already-loaded".to_string(),
-            "可直接重试 kickstart，或先卸载再加载。".to_string(),
-        )
-    } else if launch_agent_error.contains("Could not find service")
-        || launch_agent_error.contains("not loaded")
-    {
-        (
-            "not-loaded".to_string(),
-            "先确认已安装，再执行加载。".to_string(),
-        )
-    } else if launch_agent_error.trim().is_empty() {
-        ("".to_string(), "".to_string())
-    } else {
-        (
-            "unknown".to_string(),
-            "查看最近 LaunchAgent 日志摘要，按日志内容继续排查。".to_string(),
-        )
-    };
-
-    let launch_agent_status = if launch_agent_loaded {
-        "loaded".to_string()
-    } else if launch_agent_plist.exists() {
-        "installed-not-loaded".to_string()
-    } else {
-        "not-installed".to_string()
-    };
-
-    let read_history = || -> Vec<serde_json::Value> {
-        let history_path = state_dir.join("launch-agent-history.log");
-        std::fs::read_to_string(history_path)
+    let history_path = state_dir.join("launch-agent-history.log");
+    let history_entries: Vec<serde_json::Value> = if history_path.exists() {
+        std::fs::read_to_string(&history_path)
             .unwrap_or_default()
             .lines()
-            .rev()
-            .take(10)
+            .filter(|l| !l.trim().is_empty())
             .filter_map(|line| {
-                let mut parts = line.split_whitespace();
-                let at = parts.next()?.to_string();
-                let action = parts.next().unwrap_or("").to_string();
-                let state = parts.next().unwrap_or("").to_string();
-                Some(serde_json::json!({
-                    "at": at,
-                    "action": action,
-                    "state": state
-                }))
+                let parts: Vec<&str> = line.splitn(3, ' ').collect();
+                if parts.len() >= 2 {
+                    Some(serde_json::json!({
+                        "at": parts[0],
+                        "action": parts[1],
+                        "state": parts.get(2).unwrap_or(&"")
+                    }))
+                } else {
+                    None
+                }
             })
             .collect()
+    } else {
+        vec![]
     };
 
-    let duration_sec = {
-        let started = read_state("last-launch-agent-started-at.txt");
-        let finished = read_state("last-launch-agent-finished-at.txt");
-        if started.is_empty() || finished.is_empty() {
-            None
-        } else {
-            match (
-                chrono::DateTime::parse_from_rfc3339(&started),
-                chrono::DateTime::parse_from_rfc3339(&finished),
-            ) {
-                (Ok(started_at), Ok(finished_at)) => Some((finished_at - started_at).num_seconds()),
-                _ => None,
-            }
-        }
+    #[cfg(target_os = "macos")]
+    let (plist_exists, la_loaded, la_status) = {
+        let plist_path = format!(
+            "{}/Library/LaunchAgents/{}.plist",
+            get_home_dir(),
+            GATEWAY_SERVICE_LABEL
+        );
+        let exists = std::path::Path::new(&plist_path).exists();
+        let target = current_launchctl_target();
+        let loaded_output = Command::new("launchctl").args(["print", &target]).output();
+        let loaded = loaded_output.map(|o| o.status.success()).unwrap_or(false);
+        let status = if loaded { "loaded" } else { "not-loaded" };
+        (exists, loaded, status.to_string())
     };
 
-    serde_json::json!({
-        "lastDispatch": read_state("last-dispatch.txt"),
-        "lastRequest": read_state("last-request.txt"),
-        "lastResult": read_state("last-result.txt"),
-        "lastLaunchAgentState": read_state("last-launch-agent-state.txt"),
-        "lastLaunchAgentStartedAt": read_state("last-launch-agent-started-at.txt"),
-        "lastLaunchAgentFinishedAt": read_state("last-launch-agent-finished-at.txt"),
-        "lastLaunchAgentDurationSec": duration_sec,
-        "lastLaunchAgentLog": launch_agent_log,
-        "lastLaunchAgentError": launch_agent_error,
-        "lastLaunchAgentErrorKind": launch_agent_error_kind,
-        "lastLaunchAgentRecoveryHint": launch_agent_recovery_hint,
-        "launchAgentHistory": read_history(),
-        "launchAgentPlistExists": launch_agent_plist.exists(),
-        "launchAgentLoaded": launch_agent_loaded,
-        "launchAgentStatus": launch_agent_status
-    })
-    .to_string()
+    #[cfg(not(target_os = "macos"))]
+    let (plist_exists, la_loaded, la_status) = {
+        (false, false, "not-applicable".to_string())
+    };
+
+    let state = serde_json::json!({
+        "lastDispatch": read_state_file("last-dispatch.txt"),
+        "lastRequest": read_state_file("last-request.txt"),
+        "lastResult": read_state_file("last-result.txt"),
+        "lastLaunchAgentAction": read_state_file("last-launch-agent-action.txt"),
+        "lastLaunchAgentResult": read_state_file("last-launch-agent-result.txt"),
+        "lastLaunchAgentState": read_state_file("last-launch-agent-state.txt"),
+        "lastLaunchAgentStartedAt": read_state_file("last-launch-agent-started-at.txt"),
+        "lastLaunchAgentFinishedAt": read_state_file("last-launch-agent-finished-at.txt"),
+        "lastLaunchAgentLog": read_state_file("last-launch-agent-log.txt"),
+        "lastLaunchAgentError": read_state_file("last-launch-agent-error.txt"),
+        "lastLaunchAgentErrorKind": read_state_file("last-launch-agent-error-kind.txt"),
+        "lastLaunchAgentRecoveryHint": read_state_file("last-launch-agent-recovery-hint.txt"),
+        "launchAgentHistory": history_entries,
+        "launchAgentPlistExists": plist_exists,
+        "launchAgentLoaded": la_loaded,
+        "launchAgentStatus": la_status,
+    });
+
+    serde_json::to_string(&state).unwrap_or_else(|_| "{}".to_string())
 }
+
+// ─── LaunchAgent 管理（macOS 专属，其他平台返回不支持）───
 
 #[tauri::command]
 fn manage_gateway_launch_agent(action: String) -> Result<String, String> {
-    let home = env::var("HOME").unwrap_or_else(|_| "/Users/fan".to_string());
-    let state_dir = PathBuf::from(format!(
-        "{}/.openclaw/manager-runtime/gateway-control/state",
-        home
-    ));
-    let source = format!("{}/.openclaw/workspace/openclaw-manager/scripts/ai.openclaw.gateway-control.plist", home);
-    let target = format!("{}/Library/LaunchAgents/ai.openclaw.gateway-control.plist", home);
-    let uid = current_launchctl_target()
-        .split('/')
-        .nth(1)
-        .unwrap_or("501")
-        .to_string();
-    let domain = format!("gui/{}", uid);
+    if cfg!(not(target_os = "macos")) {
+        return Err("LaunchAgent 管理仅在 macOS 上可用；Windows 请使用 openclaw gateway start/stop 直接控制。".to_string());
+    }
+
+    manage_gateway_launch_agent_macos(action)
+}
+
+#[cfg(target_os = "macos")]
+fn manage_gateway_launch_agent_macos(action: String) -> Result<String, String> {
+    let state_dir = get_state_dir();
+    let _ = create_dir_all(&state_dir);
+
+    let home = get_home_dir();
+    let target = format!("{}/Library/LaunchAgents/{}.plist", home, GATEWAY_SERVICE_LABEL);
+    let domain = format!("gui/{}", {
+        let uid_output = Command::new("id").args(["-u"]).output();
+        uid_output
+            .ok()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_default()
+    });
 
     let command = match action.as_str() {
-        "install" => format!("mkdir -p '{home}/Library/LaunchAgents' && cp '{source}' '{target}'", home = home, source = source, target = target),
-        "load" => format!("launchctl bootstrap {domain} '{target}' || launchctl kickstart -k {domain}/ai.openclaw.gateway-control", domain = domain, target = target),
-        "unload" => format!("launchctl bootout {domain} '{target}' || launchctl kill SIGTERM {domain}/ai.openclaw.gateway-control", domain = domain, target = target),
-        "remove" => format!("rm -f '{target}'", target = target),
+        "install" => {
+            let plist_content = format!(
+                r#"<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>{label}</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/openclaw</string>
+        <string>gateway</string>
+        <string>start</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>StandardOutPath</key>
+    <string>{home}/.openclaw/app-logs/gateway-launch.log</string>
+    <key>StandardErrorPath</key>
+    <string>{home}/.openclaw/app-logs/gateway-launch-error.log</string>
+</dict>
+</plist>"#,
+                label = GATEWAY_SERVICE_LABEL,
+                home = home
+            );
+            let _ = std::fs::write(&target, plist_content);
+            "echo 'plist installed'".to_string()
+        }
+        "load" => format!(
+            "launchctl bootstrap {domain} '{target}' || launchctl kickstart -k {domain}/{label}",
+            domain = domain, target = target, label = GATEWAY_SERVICE_LABEL
+        ),
+        "unload" => format!(
+            "launchctl bootout {domain} '{target}' || launchctl kill SIGTERM {domain}/{label}",
+            domain = domain, target = target, label = GATEWAY_SERVICE_LABEL
+        ),
+        "remove" => format!("rm -f '{}'", target),
         _ => return Err("无效的 LaunchAgent 操作".to_string()),
     };
 
@@ -598,26 +647,37 @@ fn manage_gateway_launch_agent(action: String) -> Result<String, String> {
     let mut history = std::fs::read_to_string(&history_path).unwrap_or_default();
     history.push_str(&format!("{} {} accepted\n", now, action));
     let _ = std::fs::write(&history_path, history);
-    let _ = std::fs::write(
-        state_dir.join("last-launch-agent-action.txt"),
-        format!("{} {}", now, action),
-    );
+    let _ = std::fs::write(state_dir.join("last-launch-agent-action.txt"), format!("{} {}", now, action));
     let _ = std::fs::write(state_dir.join("last-launch-agent-state.txt"), "queued");
     let _ = std::fs::write(state_dir.join("last-launch-agent-started-at.txt"), now.clone());
     let _ = std::fs::write(state_dir.join("last-launch-agent-finished-at.txt"), "");
-    let _ = std::fs::write(
-        state_dir.join("last-launch-agent-result.txt"),
-        format!("{} accepted", now),
-    );
+    let _ = std::fs::write(state_dir.join("last-launch-agent-result.txt"), format!("{} accepted", now));
 
-    let wrapped_command = format!(
-        "zsh -lc 'printf \"%s\\n\" \"running\" > \"{state}/last-launch-agent-state.txt\"; {command} > /tmp/openclaw-manager-launchagent-{action}.log 2>&1; code=$?; if [ $code -eq 0 ]; then printf \"%s success\\n\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > \"{state}/last-launch-agent-result.txt\"; printf \"%s\\n\" \"success\" > \"{state}/last-launch-agent-state.txt\"; else printf \"%s failed\\n\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > \"{state}/last-launch-agent-result.txt\"; printf \"%s\\n\" \"failed\" > \"{state}/last-launch-agent-state.txt\"; fi; printf \"%s\\n\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > \"{state}/last-launch-agent-finished-at.txt\"'",
-        command = command.replace("'", "'\\''"),
-        action = action,
-        state = state_dir.display()
-    );
+    if action != "install" {
+        let wrapped_command = format!(
+            "zsh -lc 'printf \"%s\\n\" \"running\" > \"{state}/last-launch-agent-state.txt\"; {command} > /tmp/openclaw-manager-launchagent-{action}.log 2>&1; code=$?; if [ $code -eq 0 ]; then printf \"%s success\\n\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > \"{state}/last-launch-agent-result.txt\"; printf \"%s\\n\" \"success\" > \"{state}/last-launch-agent-state.txt\"; else printf \"%s failed\\n\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > \"{state}/last-launch-agent-result.txt\"; printf \"%s\\n\" \"failed\" > \"{state}/last-launch-agent-state.txt\"; fi; printf \"%s\\n\" \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\" > \"{state}/last-launch-agent-finished-at.txt\"'",
+            command = command.replace('\'', "'\\''"),
+            action = action,
+            state = state_dir.display()
+        );
+        dispatch_detached_shell_command(&wrapped_command).map(|_| action_message)
+    } else {
+        let _ = std::fs::write(state_dir.join("last-launch-agent-state.txt"), "success");
+        let _ = std::fs::write(
+            state_dir.join("last-launch-agent-result.txt"),
+            format!("{} success", now),
+        );
+        let _ = std::fs::write(
+            state_dir.join("last-launch-agent-finished-at.txt"),
+            chrono::Utc::now().to_rfc3339(),
+        );
+        Ok(action_message)
+    }
+}
 
-    dispatch_detached_shell_command(&wrapped_command).map(|_| action_message)
+#[cfg(not(target_os = "macos"))]
+fn manage_gateway_launch_agent_macos(_action: String) -> Result<String, String> {
+    Err("LaunchAgent 管理仅在 macOS 上可用".to_string())
 }
 
 #[tauri::command]
@@ -655,7 +715,9 @@ pub fn run() {
             run_doctor,
             read_gateway_logs,
             read_app_logs,
+            read_doctor_result,
             read_gateway_control_state,
+            manage_gateway_launch_agent,
             get_app_version
         ])
         .run(tauri::generate_context!())
