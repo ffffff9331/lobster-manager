@@ -84,9 +84,8 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
 
   const refreshGatewayState = useCallback(async () => {
     await checkGatewayStatus();
-    await fetchLogs();
     await refreshGatewayControlState();
-  }, [checkGatewayStatus, fetchLogs, refreshGatewayControlState]);
+  }, [checkGatewayStatus, refreshGatewayControlState]);
 
   const readGatewayActionFeedback = useCallback(
     async (action: GatewayAction, dispatchMessage: string): Promise<GatewayActionFeedback> => {

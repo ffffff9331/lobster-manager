@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 临时文件
+tmp/
+*.zip
+findings.md
+progress.md
+task_plan.md
+formal-release-checklist.md

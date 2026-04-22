@@ -1,3 +1,4 @@
+import { isMacOS } from "../lib/platform";
 import { useCallback, useMemo, useState } from "react";
 import { discoverLanInstances, type LanDiscoveryCandidate } from "../services/lanDiscoveryService";
 import { OverviewPage } from "../pages/OverviewPage";
@@ -240,7 +241,7 @@ function TasksTabContent({ currentInstance }: { currentInstance: AppInstance | u
   useTabRefresh({
     activeTab: "tasks",
     minIntervalMs: 45000,
-    initialRefreshers: [tasksState.loadCronData],
+    initialRefreshers: [],
     refreshers: {},
   });
 
@@ -283,7 +284,7 @@ function ModelsTabContent({
   useTabRefresh({
     activeTab: "models",
     minIntervalMs: 45000,
-    initialRefreshers: [modelsState.refreshModels],
+    initialRefreshers: [],
     refreshers: {},
   });
 
@@ -326,7 +327,7 @@ function SkillsTabContent({ currentInstance }: { currentInstance: AppInstance | 
   useTabRefresh({
     activeTab: "skills",
     minIntervalMs: 45000,
-    initialRefreshers: [skillsState.refreshSkills],
+    initialRefreshers: [],
     refreshers: {},
   });
 
@@ -358,7 +359,7 @@ function DoctorTabContent({
   useTabRefresh({
     activeTab: "doctor",
     minIntervalMs: 45000,
-    initialRefreshers: [() => systemState.loadSystemInfo({ checkUpdates: false })],
+    initialRefreshers: [],
     refreshers: {},
   });
 
@@ -448,7 +449,7 @@ function SettingsTabContent({
   useTabRefresh({
     activeTab: "settings",
     minIntervalMs: 45000,
-    initialRefreshers: [() => systemState.loadSystemInfo({ checkUpdates: false })],
+    initialRefreshers: [],
     refreshers: {},
   });
 
@@ -534,10 +535,10 @@ function SettingsTabContent({
     openConfigDir: systemState.openConfigDir,
     checkInstallStatus: systemState.checkInstallStatus,
     installOpenClawNow: systemState.installOpenClawNow,
-    onInstallService: () => void gatewayState.manageLaunchAgent("install"),
-    onEnableService: () => void gatewayState.manageLaunchAgent("load"),
-    onDisableService: () => void gatewayState.manageLaunchAgent("unload"),
-    onRemoveService: () => void gatewayState.manageLaunchAgent("remove"),
+    onInstallService: isMacOS() ? () => void gatewayState.manageLaunchAgent("install") : undefined,
+    onEnableService: isMacOS() ? () => void gatewayState.manageLaunchAgent("load") : undefined,
+    onDisableService: isMacOS() ? () => void gatewayState.manageLaunchAgent("unload") : undefined,
+    onRemoveService: isMacOS() ? () => void gatewayState.manageLaunchAgent("remove") : undefined,
     previewBackupPlan: systemState.previewBackupPlan,
     createBackupNow: systemState.createBackupNow,
     verifyBackupNow: systemState.verifyBackupNow,

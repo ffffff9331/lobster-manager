@@ -11,12 +11,15 @@ on:
         required: true
         type: string
 
+env:
+  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
 jobs:
   build-macos:
     permissions:
       contents: write
     runs-on: macos-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -38,7 +41,7 @@ jobs:
         run: npm ci
 
       - name: Build Tauri macOS bundles
-        run: npm run tauri build -- --target aarch64-apple-darwin --bundles app,dmg
+        run: npm run tauri build -- --target aarch64-apple-darwin --bundles app,dmg,updater
 
       - name: Upload macOS assets to release
         uses: softprops/action-gh-release@v2
@@ -47,6 +50,8 @@ jobs:
           files: |
             src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
             src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app.tar.gz.sig
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
           append_body: true
@@ -57,7 +62,6 @@ jobs:
     permissions:
       contents: write
     runs-on: windows-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -87,7 +91,11 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi.zip
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi.zip.sig
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.nsis.zip
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.nsis.zip.sig
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
           append_body: true
@@ -98,7 +106,6 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-22.04
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -125,7 +132,7 @@ jobs:
         run: npm ci
 
       - name: Build Tauri Linux bundles
-        run: npm run tauri build -- --target x86_64-unknown-linux-gnu --bundles appimage,deb
+        run: npm run tauri build -- --target x86_64-unknown-linux-gnu --bundles appimage,deb,updater
 
       - name: Upload Linux assets to release
         uses: softprops/action-gh-release@v2
@@ -133,6 +140,8 @@ jobs:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage.tar.gz
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage.tar.gz.sig
             src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}

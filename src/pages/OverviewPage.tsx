@@ -1,3 +1,4 @@
+import { isMacOS } from "../lib/platform";
 import { useMemo, useState } from "react";
 import type { TabKey } from "../components/AppSidebar";
 import type { GatewayActionFeedback } from "../hooks/useGatewayState";
@@ -291,7 +292,7 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
   };
 
   const latestGatewaySummary =
-    gatewayControlState?.lastLaunchAgentError
+    isMacOS() && gatewayControlState?.lastLaunchAgentError
       ? {
           tone: "warning" as const,
           title: "最近错误摘要",
@@ -313,7 +314,7 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
               { label: "查看修复建议", target: "doctor" as TabKey },
             ],
           }
-        : gatewayControlState?.lastLaunchAgentResult && isFailureSummary(gatewayControlState.lastLaunchAgentResult)
+        : isMacOS() && gatewayControlState?.lastLaunchAgentResult && isFailureSummary(gatewayControlState.lastLaunchAgentResult)
           ? {
               tone: "warning" as const,
               title: "最近控制结果",

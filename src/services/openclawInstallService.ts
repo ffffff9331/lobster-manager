@@ -1,9 +1,19 @@
 import { isLocalInstance } from "../lib/instanceCapabilities";
+import { isWindows } from "../lib/platform";
 import type { AppInstance, CommandResult } from "../types/core";
 import { dispatchDetachedLocalCommand } from "./commandService";
 import { dispatchToInstance } from "./instanceCommandService";
 
-const REMOVE_OPENCLAW_DATA_COMMAND = "python3 - <<'PY'\nimport os, shutil\nshutil.rmtree(os.path.expanduser('~/.openclaw'), ignore_errors=True)\nprint('removed')\nPY";
+function getRemoveDataCommand(): string {
+  if (isWindows()) {
+    return 'rmdir /s /q "%USERPROFILE%\\.openclaw"';
+  }
+  return "rm -rf ~/.openclaw";
+}
+
+function getUninstallCommand(): string {
+  return "npm uninstall -g openclaw";
+}
 
 async function dispatchHighImpactCommand(instance: AppInstance | undefined, command: string): Promise<CommandResult> {
   if (isLocalInstance(instance)) {
@@ -13,10 +23,10 @@ async function dispatchHighImpactCommand(instance: AppInstance | undefined, comm
 }
 
 export async function removeOpenClawData(instance?: AppInstance) {
-  await dispatchHighImpactCommand(instance, REMOVE_OPENCLAW_DATA_COMMAND);
+  await dispatchHighImpactCommand(instance, getRemoveDataCommand());
 }
 
 export async function uninstallOpenClaw(instance?: AppInstance) {
-  await dispatchHighImpactCommand(instance, "npm uninstall -g openclaw");
+  await dispatchHighImpactCommand(instance, getUninstallCommand());
   await removeOpenClawData(instance);
 }

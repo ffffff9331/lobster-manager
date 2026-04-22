@@ -1,5 +1,34 @@
 import type { AppInstance } from "../types/core";
+import { dispatchLocalCommand } from "./commandService";
+import { isLocalInstance } from "../lib/instanceCapabilities";
 
-export async function applyChannelRuntimeChanges(_instance?: AppInstance) {
-  return "频道配置已保存；如当前实例正在运行，请到 Gateway 页按需重载。";
+/**
+ * 频道配置变更后，通知 Gateway 重载配置
+ * 本地实例走 CLI 重启，远端实例走 HTTP API
+ */
+export async function applyChannelRuntimeChanges(instance?: AppInstance): Promise<string> {
+  if (!instance || isLocalInstance(instance)) {
+    try {
+      const result = await dispatchLocalCommand("openclaw gateway restart");
+      if (result.success) {
+        return "频道配置已保存，Gateway 正在重载。";
+      }
+      return `频道配置已保存，但 Gateway 重载失败：${result.error || "未知错误"}`;
+    } catch {
+      return "频道配置已保存；Gateway 重载失败，请手动到 Gateway 页重启。";
+    }
+  }
+
+  // 远端实例：尝试通过 HTTP 通知
+  try {
+    const baseUrl = instance.baseUrl?.replace(/\/$/, "") || "";
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (instance.apiKey?.trim()) {
+      headers.Authorization = `Bearer ${instance.apiKey.trim()}`;
+    }
+    await fetch(`${baseUrl}/v1/config/reload`, { method: "POST", headers });
+    return "频道配置已保存，远端 Gateway 重载请求已发送。";
+  } catch {
+    return "频道配置已保存；远端 Gateway 重载失败，请手动重启目标实例的 Gateway。";
+  }
 }
