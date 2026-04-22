@@ -24,24 +24,16 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref_name }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin
-
       - run: npm ci
-
       - name: Build Tauri macOS bundles
         run: npm run tauri build -- --target aarch64-apple-darwin --bundles app,dmg
-
-      - name: List bundle output
-        run: find src-tauri/target/aarch64-apple-darwin/release/bundle -type f | head -50
-
       - name: Upload macOS assets to release
         uses: softprops/action-gh-release@v2
         with:
@@ -64,36 +56,25 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref_name }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
-
       - run: npm ci
-
       - name: Build Tauri Windows bundles
         run: npm run tauri build -- --target x86_64-pc-windows-msvc --bundles msi,nsis
-
-      - name: List bundle output
-        shell: bash
-        run: find src-tauri/target/x86_64-pc-windows-msvc/release/bundle -type f | head -50
-
       - name: Upload Windows assets to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.msi
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.msi.zip
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.msi.zip.sig
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.msi.sig
             src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.exe
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.nsis.zip
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.nsis.zip.sig
+            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.exe.sig
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
           append_body: true
@@ -108,38 +89,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.inputs.tag || github.ref_name }}
-
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-gnu
-
       - name: Install Linux deps
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-
       - run: npm ci
-
       - name: Build Tauri Linux bundles
         run: npm run tauri build -- --target x86_64-unknown-linux-gnu --bundles appimage,deb
-
-      - name: List bundle output
-        run: find src-tauri/target/x86_64-unknown-linux-gnu/release/bundle -type f | head -50
-
       - name: Upload Linux assets to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
           files: |
             src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/**/*.AppImage
-            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/**/*.AppImage.tar.gz
-            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/**/*.AppImage.tar.gz.sig
             src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/**/*.deb
+            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/**/*.deb.sig
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
           append_body: true
