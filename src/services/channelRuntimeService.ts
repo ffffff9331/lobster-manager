@@ -1,6 +1,6 @@
 import type { AppInstance } from "../types/core";
-import { dispatchLocalCommand } from "./commandService";
 import { isLocalInstance } from "../lib/instanceCapabilities";
+import { dispatchToInstance } from "./instanceCommandService";
 
 /**
  * 频道配置变更后，通知 Gateway 重载配置
@@ -9,7 +9,7 @@ import { isLocalInstance } from "../lib/instanceCapabilities";
 export async function applyChannelRuntimeChanges(instance?: AppInstance): Promise<string> {
   if (!instance || isLocalInstance(instance)) {
     try {
-      const result = await dispatchLocalCommand("openclaw gateway restart");
+      const result = await dispatchToInstance(instance, "openclaw gateway restart");
       if (result.success) {
         return "频道配置已保存，Gateway 正在重载。";
       }

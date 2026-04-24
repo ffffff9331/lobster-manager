@@ -197,25 +197,6 @@ fn read_file_tail(path: &std::path::Path, lines: u32) -> String {
     }
 }
 
-fn unwrap_output(output: std::io::Result<std::process::Output>) -> Result<String, String> {
-    match output {
-        Ok(out) => {
-            let stdout = String::from_utf8_lossy(&out.stdout).trim().to_string();
-            let stderr = String::from_utf8_lossy(&out.stderr).trim().to_string();
-            if out.status.success() {
-                Ok(if stdout.is_empty() { "ok".to_string() } else { stdout })
-            } else if !stderr.is_empty() {
-                Err(stderr)
-            } else if !stdout.is_empty() {
-                Err(stdout)
-            } else {
-                Err(format!("命令退出码: {:?}", out.status.code()))
-            }
-        }
-        Err(e) => Err(e.to_string()),
-    }
-}
-
 // ─── macOS LaunchAgent 工具（仅 macOS 编译）───
 
 #[cfg(target_os = "macos")]
@@ -414,6 +395,13 @@ fn execute_wsl_command(command: &str, log_prefix: &str) -> CommandResult {
 
 #[tauri::command]
 fn run_command(command: String) -> CommandResult {
+    if is_gateway_lifecycle_command(&command) {
+        return build_command_result(
+            false,
+            String::new(),
+            Some("Gateway 生命周期动作必须走专用控制桥，不能通过通用 run_command 执行".to_string()),
+        );
+    }
     execute_compat_command(&command)
 }
 
@@ -749,7 +737,6 @@ fn get_app_version(app: tauri::AppHandle) -> String {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             if app.get_webview_window("main").is_none() {

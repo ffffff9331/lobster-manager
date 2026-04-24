@@ -4,7 +4,10 @@ import type { AppInstance, CommandResult } from "../types/core";
 import { dispatchDetachedLocalCommand } from "./commandService";
 import { dispatchToInstance } from "./instanceCommandService";
 
-function getRemoveDataCommand(): string {
+function getRemoveDataCommand(instance?: AppInstance): string {
+  if (instance?.type === "wsl") {
+    return "rm -rf ~/.openclaw";
+  }
   if (isWindows()) {
     return 'rmdir /s /q "%USERPROFILE%\\.openclaw"';
   }
@@ -16,14 +19,14 @@ function getUninstallCommand(): string {
 }
 
 async function dispatchHighImpactCommand(instance: AppInstance | undefined, command: string): Promise<CommandResult> {
-  if (isLocalInstance(instance)) {
+  if (!instance || isLocalInstance(instance)) {
     return dispatchDetachedLocalCommand(command);
   }
   return dispatchToInstance(instance, command);
 }
 
 export async function removeOpenClawData(instance?: AppInstance) {
-  await dispatchHighImpactCommand(instance, getRemoveDataCommand());
+  await dispatchHighImpactCommand(instance, getRemoveDataCommand(instance));
 }
 
 export async function uninstallOpenClaw(instance?: AppInstance) {

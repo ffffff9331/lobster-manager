@@ -9,7 +9,7 @@ function getTauriUnavailableResult(action: string): CommandResult {
   };
 }
 
-function canUseTauriInvoke() {
+export function canUseTauriInvoke() {
   if (typeof window === "undefined") return false;
   const tauriInternals = (window as typeof window & { __TAURI_INTERNALS__?: { invoke?: unknown } }).__TAURI_INTERNALS__;
   return typeof invoke === "function" && typeof tauriInternals?.invoke === "function";

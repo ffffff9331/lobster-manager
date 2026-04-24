@@ -1,4 +1,5 @@
-import { readWslCommand } from "./commandService";
+import { canUseTauriInvoke, readWslCommand } from "./commandService";
+import { isWindows } from "../lib/platform";
 import type { AppInstance, AppInstanceSource, AppInstanceStatus } from "../types/core";
 
 const STORAGE_KEY = "ocm.instances.v2";
@@ -108,7 +109,7 @@ function normalizeInstanceRecord(input: Partial<AppInstance> | null | undefined)
     id: input.id,
     name: input.name,
     type: normalizedType,
-    baseUrl: input.baseUrl || (normalizedType === "local" ? defaultLocalInstance.baseUrl : ""),
+    baseUrl: input.baseUrl || (normalizedType === "local" || normalizedType === "wsl" ? defaultLocalInstance.baseUrl : ""),
     status: input.status || "unknown",
     apiKey: input.apiKey || "",
     isCurrent: Boolean(input.isCurrent),
@@ -254,6 +255,13 @@ export async function detectLocalInstance(): Promise<LocalInstanceDetectionResul
     return { exists: true, running: true, baseUrl };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : String(err);
+    if (!isWindows() || !canUseTauriInvoke()) {
+      if (errorMsg.includes("abort") || errorMsg.includes("Failed to fetch")) {
+        return { exists: false, running: false, baseUrl, error: "无法连接到本机实例" };
+      }
+      return { exists: false, running: false, baseUrl, error: errorMsg };
+    }
+
     const wslVersion = await readWslCommand("command -v openclaw >/dev/null 2>&1 && openclaw --version");
     if (wslVersion.success) {
       const wslStatus = await readWslCommand("openclaw gateway status --json");

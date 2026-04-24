@@ -19,11 +19,11 @@ export function isManagedByHost(instance?: InstanceLike): boolean {
 }
 
 export function supportsHostFileOps(instance?: InstanceLike): boolean {
-  return isManagedByHost(instance);
+  return isLocalInstance(instance);
 }
 
 export function supportsHostServiceManagement(instance?: InstanceLike): boolean {
-  return isManagedByHost(instance);
+  return isLocalInstance(instance);
 }
 
 export function supportsDirectUninstall(instance?: InstanceLike): boolean {
@@ -47,7 +47,7 @@ export function getInstanceCapabilitySummary(instance?: InstanceLike): string {
     return "支持本机宿主能力、配置目录直开、服务管理与本地安装。";
   }
   if (instance.type === "wsl") {
-    return "WSL2 实例：Manager 运行在 Windows，OpenClaw runtime 运行在 WSL2，命令通过 wsl.exe 桥接。";
+    return "WSL2 实例：Manager 运行在 Windows，OpenClaw runtime 运行在 WSL2，命令通过 wsl.exe 桥接；Linux 路径目录打开需在 WSL 内或 Windows 资源管理器手动处理。";
   }
   if (instance.type === "docker") {
     return "容器实例：优先通过 HTTP/API 管理，宿主文件与服务管理请在 Docker 平台侧处理。";
@@ -63,7 +63,7 @@ export function getInstanceBoundaryBadges(instance?: InstanceLike): string[] {
     return ["仅本机可用", "宿主能力可用", "桌面环境直连"];
   }
   if (instance.type === "wsl") {
-    return ["WSL2 runtime", "wsl.exe 桥接", "Windows 本机管理"];
+    return ["WSL2 runtime", "wsl.exe 桥接", "目录需手动处理"];
   }
   if (instance.type === "docker") {
     return ["HTTP/API 可管理", "需 Docker 平台处理", "非本机宿主"];
