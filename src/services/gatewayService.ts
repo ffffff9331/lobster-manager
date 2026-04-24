@@ -20,6 +20,10 @@ function canUseTauriInvoke() {
   return typeof invoke === "function" && typeof tauriInternals?.invoke === "function";
 }
 
+function isWslInstance(instance?: AppInstance) {
+  return instance?.type === "wsl";
+}
+
 function normalizeGatewayStatus(raw: any): GatewayStatus {
   if (!raw || typeof raw !== "object") {
     return { running: false };
@@ -91,7 +95,7 @@ export async function getGatewayStatus(instance?: AppInstance): Promise<GatewayS
     // fallback below
   }
 
-  if (!canUseTauriInvoke()) {
+  if (!canUseTauriInvoke() || isWslInstance(instance)) {
     return { running: false };
   }
 
@@ -99,7 +103,7 @@ export async function getGatewayStatus(instance?: AppInstance): Promise<GatewayS
 }
 
 export async function fetchGatewayLogs(instance?: AppInstance) {
-  if (!isLocalInstance(instance)) {
+  if (!isLocalInstance(instance) || isWslInstance(instance)) {
     const result = await readFromInstance(instance, GATEWAY_LOGS_COMMAND);
     return result.success ? result.output : result.error || "";
   }
@@ -112,6 +116,12 @@ export async function fetchGatewayLogs(instance?: AppInstance) {
 }
 
 export async function getGatewayControlState(instance?: AppInstance): Promise<GatewayControlState> {
+  if (isWslInstance(instance)) {
+    return {
+      lastResult: "WSL2 实例的 Gateway 控制状态请以 WSL 内命令输出与实例状态为准；当前不走宿主机控制状态缓存。",
+    };
+  }
+
   if (!supportsHostServiceManagement(instance)) {
     return {
       lastResult: "当前实例不是本机；服务控制状态读取属于本机宿主能力，请改看该实例自身状态与部署侧日志。",
@@ -194,7 +204,7 @@ function unwrapGatewayCommandOutput(
 export async function controlGateway(action: "start" | "stop" | "restart", instance?: AppInstance): Promise<string> {
   const command = `openclaw gateway ${action}`;
 
-  if (isLocalInstance(instance)) {
+  if (isLocalInstance(instance) && !isWslInstance(instance)) {
     if (!canUseTauriInvoke()) {
       return `当前是 web preview；Gateway ${action} 仅在 Tauri 桌面环境可用。`;
     }
