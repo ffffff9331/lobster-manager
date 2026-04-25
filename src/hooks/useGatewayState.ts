@@ -37,13 +37,17 @@ export interface GatewayState {
 }
 
 const ACTION_REFRESH_WAIT_MS = {
-  start: 400,
-  stop: 400,
-  restart: 1200,
+  start: 1400,
+  stop: 800,
+  restart: 1800,
 } as const;
-const RESTART_INITIAL_WAIT_MS = 1500;
+const RESTART_INITIAL_WAIT_MS = 1800;
 const RESTART_POLL_INTERVAL_MS = 1500;
 const RESTART_POLL_ATTEMPTS = 8;
+const START_POLL_INTERVAL_MS = 1200;
+const START_POLL_ATTEMPTS = 8;
+const STOP_POLL_INTERVAL_MS = 1000;
+const STOP_POLL_ATTEMPTS = 5;
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -115,19 +119,41 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
     }
   }, [refreshGatewayState]);
 
+  const pollGatewayUntilExpectedState = useCallback(async (expectedRunning: boolean, attempts: number, intervalMs: number) => {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      await wait(intervalMs);
+      const status = await getGatewayStatus(currentInstance);
+      const controlState = await getGatewayControlState(currentInstance);
+      setGatewayStatus(status);
+      setGatewayControlState(controlState);
+      if (Boolean(status.running) === expectedRunning) {
+        return { status, controlState };
+      }
+    }
+    return null;
+  }, [currentInstance]);
+
   const refreshGatewayAfterAction = useCallback(
     async (action: GatewayAction) => {
       await wait(ACTION_REFRESH_WAIT_MS[action]);
       await refreshGatewayState();
 
-      if (action !== "restart") {
+      if (action === "restart") {
+        await wait(RESTART_INITIAL_WAIT_MS);
+        await pollGatewayAfterRestart();
         return;
       }
 
-      await wait(RESTART_INITIAL_WAIT_MS);
-      await pollGatewayAfterRestart();
+      if (action === "start") {
+        await pollGatewayUntilExpectedState(true, START_POLL_ATTEMPTS, START_POLL_INTERVAL_MS);
+        return;
+      }
+
+      if (action === "stop") {
+        await pollGatewayUntilExpectedState(false, STOP_POLL_ATTEMPTS, STOP_POLL_INTERVAL_MS);
+      }
     },
-    [pollGatewayAfterRestart, refreshGatewayState],
+    [pollGatewayAfterRestart, pollGatewayUntilExpectedState, refreshGatewayState],
   );
 
   const handleGatewayControl = useCallback(async (action: GatewayAction) => {

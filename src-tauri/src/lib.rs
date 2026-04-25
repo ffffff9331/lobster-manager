@@ -157,16 +157,31 @@ fn dispatch_detached_shell_command(command: &str) -> Result<(), String> {
 
 
 #[cfg(target_os = "windows")]
-fn escape_for_wsl_sh(command: &str) -> String {
-    command.replace('\\', "\\\\").replace('"', "\\\"")
+fn escape_for_wsl_double_quotes(command: &str) -> String {
+    command
+        .replace('\\', "\\\\")
+        .replace('"', "\\\"")
+        .replace('$', "\\$")
+        .replace('`', "\\`")
+}
+
+#[cfg(target_os = "windows")]
+fn build_wsl_shell_command(command: &str) -> String {
+    let escaped = escape_for_wsl_double_quotes(command);
+    format!(
+        "export PATH=\"$HOME/.local/bin:$HOME/bin:$HOME/.npm-global/bin:$HOME/.volta/bin:$HOME/.asdf/shims:/usr/local/bin:/usr/bin:/bin:$PATH\"; \
+         [ -f /etc/profile ] && . /etc/profile >/dev/null 2>&1; \
+         [ -f \"$HOME/.profile\" ] && . \"$HOME/.profile\" >/dev/null 2>&1; \
+         [ -f \"$HOME/.bashrc\" ] && . \"$HOME/.bashrc\" >/dev/null 2>&1; \
+         {escaped}",
+    )
 }
 
 #[cfg(target_os = "windows")]
 fn run_wsl_command(command: &str) -> std::io::Result<std::process::Output> {
-    let wrapped = format!("{}", escape_for_wsl_sh(command));
+    let wrapped = build_wsl_shell_command(command);
     Command::new("wsl.exe")
-        .args(["-e", "sh", "-lc", &wrapped])
-        .current_dir(get_default_dir())
+        .args(["-e", "bash", "-lc", &wrapped])
         .output()
 }
 
