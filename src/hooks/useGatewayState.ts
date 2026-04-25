@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { formatActionError } from "../lib/errorMessage";
 import type { AppInstance, GatewayControlState, GatewayStatus } from "../types/core";
 import {
@@ -57,6 +57,31 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
   const [gatewayStatus, setGatewayStatus] = useState<GatewayStatus>({ running: false, port: 18789 });
   const [gatewayControlState, setGatewayControlState] = useState<GatewayControlState>({});
   const [liveLogs, setLiveLogs] = useState("");
+
+  useEffect(() => {
+    setGatewayStatus({ running: false, port: currentInstance ? undefined : 18789 });
+    setGatewayControlState({});
+    setLiveLogs("");
+
+    if (!currentInstance) {
+      return;
+    }
+
+    void (async () => {
+      try {
+        const [status, controlState, logs] = await Promise.all([
+          getGatewayStatus(currentInstance),
+          getGatewayControlState(currentInstance),
+          fetchGatewayLogs(currentInstance),
+        ]);
+        setGatewayStatus(status);
+        setGatewayControlState(controlState);
+        setLiveLogs(logs);
+      } catch (e) {
+        console.error("Failed to refresh gateway state after instance switch:", e);
+      }
+    })();
+  }, [currentInstance]);
 
   const checkGatewayStatus = useCallback(async () => {
     try {
