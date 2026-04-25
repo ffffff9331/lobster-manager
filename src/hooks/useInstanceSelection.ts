@@ -62,7 +62,7 @@ export function useInstanceSelection() {
   };
 
   const handleAddDetectedLocal = () => {
-    if (!(localInstanceStatus?.exists && localInstanceStatus?.running)) {
+    if (!localInstanceStatus?.exists) {
       return null;
     }
 

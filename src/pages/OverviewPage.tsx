@@ -25,6 +25,7 @@ interface OverviewPageProps {
     exists: boolean;
     running: boolean;
     baseUrl: string;
+    type?: AppInstance["type"];
     error?: string;
   } | null;
   detectingLocal?: boolean;
@@ -100,23 +101,43 @@ function getDeploymentCopy(
     exists: boolean;
     running: boolean;
     baseUrl: string;
+    type?: AppInstance["type"];
     error?: string;
   } | null,
 ): DeploymentCopy {
   if (state === "not-configured") {
-    if (localDetection?.exists && localDetection.running) {
-      return {
-        eyebrow: "已发现本机实例",
-        title: "发现可接入的 OpenClaw",
-        description: `已检测到本机 OpenClaw 正在 ${localDetection.baseUrl} 运行，现在可以直接接入 manager。`,
-        primary: "一键接入本机实例",
-        secondary: "查看其他部署方式",
-        primaryAction: "detect-local" as const,
-        primaryTarget: "settings" as TabKey,
-        secondaryTarget: "doctor" as TabKey,
-        status: "可接入",
-        accent: "success" as const,
-      };
+    if (localDetection?.exists) {
+      if (localDetection.type === "wsl") {
+        return {
+          eyebrow: "已发现 WSL2 实例",
+          title: localDetection.running ? "发现可接入的 WSL2 OpenClaw" : "发现可接入的 WSL2 OpenClaw（未启动）",
+          description: localDetection.running
+            ? `已检测到 WSL2 中的 OpenClaw 正在 ${localDetection.baseUrl} 运行，现在可以直接接入 manager。`
+            : `已检测到 WSL2 中安装了 OpenClaw，但 Gateway 当前未运行。可以先接入该实例，再到网关页查看状态、日志并执行启动。`,
+          primary: "一键接入 WSL2 实例",
+          secondary: "查看其他部署方式",
+          primaryAction: "detect-local" as const,
+          primaryTarget: "settings" as TabKey,
+          secondaryTarget: "doctor" as TabKey,
+          status: localDetection.running ? "可接入" : "已发现",
+          accent: "success" as const,
+        };
+      }
+
+      if (localDetection.running) {
+        return {
+          eyebrow: "已发现本机实例",
+          title: "发现可接入的 OpenClaw",
+          description: `已检测到本机 OpenClaw 正在 ${localDetection.baseUrl} 运行，现在可以直接接入 manager。`,
+          primary: "一键接入本机实例",
+          secondary: "查看其他部署方式",
+          primaryAction: "detect-local" as const,
+          primaryTarget: "settings" as TabKey,
+          secondaryTarget: "doctor" as TabKey,
+          status: "可接入",
+          accent: "success" as const,
+        };
+      }
     }
 
     return {
@@ -204,11 +225,13 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
         setGatewayStartPhase("idle");
       }
       if (deploymentCopy.primaryAction === "detect-local") {
-        if (localDetection?.exists && localDetection.running) {
+        if (localDetection?.exists) {
           await onAddDetectedLocal?.();
           await new Promise((resolve) => window.setTimeout(resolve, 120));
           await onRefreshRuntime?.();
-          setActionMessage("已接入检测到的本机 OpenClaw，并已切到当前实例、刷新首页状态。");
+          setActionMessage(localDetection.type === "wsl"
+            ? "已接入检测到的 WSL2 OpenClaw，并已切到当前实例、刷新首页状态。"
+            : "已接入检测到的本机 OpenClaw，并已切到当前实例、刷新首页状态。");
           return;
         }
         await onOpenAddInstance?.();
@@ -354,7 +377,7 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
             <div className="deployment-meta-card">
               <div className="deployment-meta-label">当前实例</div>
               <div className="deployment-meta-value">{currentInstance ? currentInstance.name : "未接入"}</div>
-              <div className="deployment-meta-note">{currentInstance ? `${getInstanceTypeLabel(currentInstance.type)} · ${currentInstance.baseUrl}` : localDetection?.exists && localDetection.running ? `已探测到本机实例：${localDetection.baseUrl}` : "先部署或接入一个可管理实例"}</div>
+              <div className="deployment-meta-note">{currentInstance ? `${getInstanceTypeLabel(currentInstance.type)} · ${currentInstance.baseUrl}` : localDetection?.exists ? `${localDetection.type === "wsl" ? "已探测到 WSL2 实例" : "已探测到本机实例"}：${localDetection.baseUrl}` : "先部署或接入一个可管理实例"}</div>
             </div>
             <div className="deployment-meta-card">
               <div className="deployment-meta-label">Gateway</div>

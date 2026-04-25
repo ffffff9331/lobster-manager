@@ -2,6 +2,17 @@ import { canUseTauriInvoke, readWslCommand } from "./commandService";
 import { isWindows } from "../lib/platform";
 import type { AppInstance, AppInstanceSource, AppInstanceStatus } from "../types/core";
 
+function parseGatewayRunningFromJson(raw?: string): boolean {
+  if (!raw?.trim()) return false;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.running === "boolean") return parsed.running;
+    return parsed?.service?.runtime?.status === "running" || parsed?.service?.runtime?.state === "active";
+  } catch {
+    return false;
+  }
+}
+
 const STORAGE_KEY = "ocm.instances.v2";
 const CURRENT_KEY = "ocm.currentInstance.v2";
 const SETTINGS_KEY = "ocm.settings.v2";
@@ -265,13 +276,16 @@ export async function detectLocalInstance(): Promise<LocalInstanceDetectionResul
     const wslVersion = await readWslCommand("command -v openclaw >/dev/null 2>&1 && openclaw --version");
     if (wslVersion.success) {
       const wslStatus = await readWslCommand("openclaw gateway status --json");
+      const wslRunning = wslStatus.success && parseGatewayRunningFromJson(wslStatus.output);
       return {
         exists: true,
-        running: wslStatus.success,
+        running: wslRunning,
         baseUrl,
         type: "wsl",
         detail: wslVersion.output.trim(),
-        error: wslStatus.success ? undefined : wslStatus.error || wslStatus.output || "已检测到 WSL2 OpenClaw，但 Gateway 未运行或状态不可读",
+        error: wslStatus.success
+          ? (wslRunning ? undefined : "已检测到 WSL2 OpenClaw，但 Gateway 当前未运行")
+          : wslStatus.error || wslStatus.output || "已检测到 WSL2 OpenClaw，但 Gateway 状态不可读",
       };
     }
 

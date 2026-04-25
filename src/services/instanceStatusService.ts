@@ -1,6 +1,17 @@
 import type { AppInstance, AppInstanceStatus } from "../types/core";
 import { readFromInstance } from "./instanceCommandService";
 
+function parseGatewayRunningFromJson(raw?: string): boolean {
+  if (!raw?.trim()) return false;
+  try {
+    const parsed = JSON.parse(raw);
+    if (typeof parsed?.running === "boolean") return parsed.running;
+    return parsed?.service?.runtime?.status === "running" || parsed?.service?.runtime?.state === "active";
+  } catch {
+    return false;
+  }
+}
+
 function canUseTauriInvoke() {
   if (typeof window === "undefined") return false;
   const tauriInternals = (window as typeof window & { __TAURI_INTERNALS__?: { invoke?: unknown } }).__TAURI_INTERNALS__;
@@ -31,7 +42,7 @@ async function probeLocalInstance(instance: AppInstance): Promise<AppInstanceSta
 
   try {
     const result = await readFromInstance(instance, "openclaw gateway status --json");
-    if (result.success) {
+    if (result.success && parseGatewayRunningFromJson(result.output)) {
       return "online";
     }
     return probeViaHttpHealth(instance);
@@ -47,7 +58,7 @@ export async function probeInstanceStatus(instance: AppInstance): Promise<AppIns
 
   try {
     const result = await readFromInstance(instance, "openclaw gateway status --json");
-    if (!result.success) {
+    if (!result.success || !parseGatewayRunningFromJson(result.output)) {
       return "offline";
     }
     return "online";
