@@ -54,12 +54,12 @@ function wait(ms: number) {
 }
 
 export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewayStateOptions): GatewayState {
-  const [gatewayStatus, setGatewayStatus] = useState<GatewayStatus>({ running: false, port: 18789 });
+  const [gatewayStatus, setGatewayStatus] = useState<GatewayStatus>({ running: false });
   const [gatewayControlState, setGatewayControlState] = useState<GatewayControlState>({});
   const [liveLogs, setLiveLogs] = useState("");
 
   useEffect(() => {
-    setGatewayStatus({ running: false, port: currentInstance ? undefined : 18789 });
+    setGatewayStatus({ running: false });
     setGatewayControlState({});
     setLiveLogs("");
 

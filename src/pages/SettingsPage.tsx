@@ -373,6 +373,36 @@ function BackupSection({
   );
 }
 
+function getOpenConfigDirHint(currentInstance?: SettingsPageState["currentInstance"]) {
+  if (!currentInstance) {
+    return "请先选择实例后再打开配置目录";
+  }
+  if (!supportsHostFileOps(currentInstance)) {
+    return "当前实例不是本机，暂不支持从管理器直接打开配置目录";
+  }
+  return "";
+}
+
+function getUninstallHint(currentInstance?: SettingsPageState["currentInstance"]) {
+  if (!currentInstance) {
+    return "请先选择实例后再执行卸载操作";
+  }
+  if (!supportsDirectUninstall(currentInstance)) {
+    return "当前实例不是本机，暂不支持从管理器直接卸载";
+  }
+  return "";
+}
+
+function getUninstallDescription(currentInstance?: SettingsPageState["currentInstance"]) {
+  if (!currentInstance) {
+    return "请先选择要操作的实例，再决定是否执行卸载。";
+  }
+  if (!supportsDirectUninstall(currentInstance)) {
+    return "当前实例不是本机，不提供 UI 内一键卸载；请登录对应机器或容器平台手动处理。";
+  }
+  return "以下操作不可撤销，请谨慎操作";
+}
+
 function AdvancedSettingsSection({ currentInstance, configPath, dataPath, darkMode, setDarkMode, openConfigDir }: {
   currentInstance?: SettingsPageState["currentInstance"];
   configPath: string;
@@ -381,6 +411,8 @@ function AdvancedSettingsSection({ currentInstance, configPath, dataPath, darkMo
   setDarkMode: (value: boolean) => void;
   openConfigDir: () => void;
 }) {
+  const openConfigDirHint = getOpenConfigDirHint(currentInstance);
+
   return (
     <>
       <SettingsSectionTitle>高级设置</SettingsSectionTitle>
@@ -390,7 +422,7 @@ function AdvancedSettingsSection({ currentInstance, configPath, dataPath, darkMo
             <div className="setting-name">配置文件目录</div>
             <div className="setting-description">{configPath || "待检测"}</div>
           </div>
-          <button className="btn btn-secondary" onClick={openConfigDir} disabled={!supportsHostFileOps(currentInstance)} title={!supportsHostFileOps(currentInstance) ? "当前实例不是本机，暂不支持从管理器直接打开配置目录" : ""}>打开目录</button>
+          <button className="btn btn-secondary" onClick={openConfigDir} disabled={!supportsHostFileOps(currentInstance)} title={openConfigDirHint}>打开目录</button>
         </div>
         <div className="setting-item">
           <div className="setting-info">
@@ -411,6 +443,9 @@ function AdvancedSettingsSection({ currentInstance, configPath, dataPath, darkMo
 }
 
 function DangerZoneSection({ currentInstance, setShowUninstallConfirm }: { currentInstance?: SettingsPageState["currentInstance"]; setShowUninstallConfirm: (value: boolean) => void }) {
+  const uninstallHint = getUninstallHint(currentInstance);
+  const uninstallDescription = getUninstallDescription(currentInstance);
+
   return (
     <>
       <SettingsSectionTitle danger>危险区域</SettingsSectionTitle>
@@ -418,9 +453,9 @@ function DangerZoneSection({ currentInstance, setShowUninstallConfirm }: { curre
         <div className="setting-item" style={{ border: "1px solid var(--error)", borderRadius: "8px", padding: "12px" }}>
           <div className="setting-info">
             <div className="setting-name" style={{ color: "var(--error)" }}>卸载 OpenClaw</div>
-            <div className="setting-description">{!supportsDirectUninstall(currentInstance) ? "当前实例不是本机，不提供 UI 内一键卸载；请登录对应机器或容器平台手动处理。" : "以下操作不可撤销，请谨慎操作"}</div>
+            <div className="setting-description">{uninstallDescription}</div>
           </div>
-          <button className="btn btn-danger" onClick={() => setShowUninstallConfirm(true)} disabled={!supportsDirectUninstall(currentInstance)} title={!supportsDirectUninstall(currentInstance) ? "当前实例不是本机，暂不支持从管理器直接卸载" : ""}>卸载</button>
+          <button className="btn btn-danger" onClick={() => setShowUninstallConfirm(true)} disabled={!supportsDirectUninstall(currentInstance)} title={uninstallHint}>卸载</button>
         </div>
       </div>
     </>

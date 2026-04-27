@@ -46,7 +46,7 @@ export function ChatPage(props: ChatPageProps) {
               <div className="gateway-entry-title">Gateway</div>
               <div className="gateway-entry-desc">打开 Gateway 聊天界面</div>
             </div>
-            <div className="gateway-entry-url">{props.gatewayUrl || "http://127.0.0.1:18789/"}</div>
+            <div className="gateway-entry-url">{props.gatewayUrl || "未接入 Gateway"}</div>
           </button>
 
         </div>

@@ -46,7 +46,7 @@ const DETECTED_TYPE_LABELS: Record<string, string> = {
 };
 
 type DeploymentState = "not-configured" | "runtime-ready" | "healthy" | "attention";
-type DeploymentPrimaryAction = "detect-local" | "start-gateway" | "refresh";
+type DeploymentPrimaryAction = "detect-instances" | "start-gateway" | "refresh";
 
 interface DeploymentCopy {
   eyebrow: string;
@@ -65,9 +65,9 @@ function getPlatformPlan() {
   if (typeof navigator === "undefined") {
     return {
       platformLabel: "当前设备",
-      recommendedPlan: "优先按当前设备选择 v2 Beta 推荐包，再接入本机或远端实例。",
-      primaryAction: "查看 Beta 接入方式",
-      helper: "先确认平台，再决定是接入本机实例、远端实例，还是走 WSL2。",
+      recommendedPlan: "优先按当前设备准备 v2 Beta 或现有 runtime，再接入一个明确要管理的实例。",
+      primaryAction: "查看实例接入方式",
+      helper: "先明确你要管理的是本机、WSL2、Docker、NAS 还是远端实例，再进入对应链路。",
     };
   }
 
@@ -77,26 +77,26 @@ function getPlatformPlan() {
   if (platform.includes("mac") || userAgent.includes("mac os")) {
     return {
       platformLabel: "macOS",
-      recommendedPlan: "推荐先下载 v2 Beta（DMG），再接入本机实例或已有实例。",
-      primaryAction: "查看 macOS Beta 接入方式",
-      helper: "macOS 链路最短，适合直接体验 v2 Beta 并继续做本机接入。",
+      recommendedPlan: "推荐先准备 v2 Beta（DMG）或已有 runtime，再接入本机或其他明确实例。",
+      primaryAction: "查看 macOS 实例接入方式",
+      helper: "macOS 既可以管理本机实例，也可以把 WSL2 / Docker / NAS / 远端实例作为独立目标接入。",
     };
   }
 
   if (platform.includes("win") || userAgent.includes("windows")) {
     return {
       platformLabel: "Windows",
-      recommendedPlan: "推荐 v2 Beta + WSL2 方案：Manager 在 Windows，OpenClaw runtime 在 WSL2。",
-      primaryAction: "查看 Windows Beta / WSL2 方案",
-      helper: "先走 WSL2，能避开原生安装的大部分 PATH / 权限 / 服务坑。",
+      recommendedPlan: "推荐先准备 v2 Beta，并按实际运行位置接入实例，例如本机、WSL2 或远端。",
+      primaryAction: "查看 Windows 实例接入方式",
+      helper: "Windows 下可以把宿主本机和 WSL2 当成两个独立实例管理，不必依赖默认本机推断。",
     };
   }
 
   return {
     platformLabel: "Linux",
-    recommendedPlan: "推荐先下载 v2 Beta（AppImage），再接入本机或轻量服务器实例。",
-    primaryAction: "查看 Linux Beta 接入方式",
-    helper: "Linux 最适合直接跑 runtime，也适合配合 manager 管理本机和服务器实例。",
+    recommendedPlan: "推荐先准备 v2 Beta（AppImage）或现有 runtime，再接入本机或其他明确实例。",
+    primaryAction: "查看 Linux 实例接入方式",
+    helper: "Linux 适合直接运行本机实例，也适合接入轻量服务器、Docker 或其他远端实例。",
   };
 }
 
@@ -128,9 +128,9 @@ function getDeploymentCopy(
           description: localDetection.running
             ? `已检测到 WSL2 中的 OpenClaw 正在 ${localDetection.baseUrl} 运行，现在可以直接接入 manager。`
             : `已检测到 WSL2 中安装了 OpenClaw，但 Gateway 当前未运行。可以先接入该实例，再到网关页查看状态、日志并执行启动。`,
-          primary: "一键接入 WSL2 实例",
-          secondary: "查看其他部署方式",
-          primaryAction: "detect-local" as const,
+          primary: "接入检测到的 WSL2 实例",
+          secondary: "查看接入方式",
+          primaryAction: "detect-instances" as const,
           primaryTarget: "settings" as TabKey,
           secondaryTarget: "doctor" as TabKey,
           status: localDetection.running ? "可接入" : "已发现",
@@ -140,12 +140,12 @@ function getDeploymentCopy(
 
       if (localDetection.running) {
         return {
-          eyebrow: "已发现本机实例",
+          eyebrow: "已发现可接入实例",
           title: "发现可接入的 OpenClaw",
-          description: `已检测到本机 OpenClaw 正在 ${localDetection.baseUrl} 运行，现在可以直接接入 manager。`,
-          primary: "一键接入本机实例",
-          secondary: "查看其他部署方式",
-          primaryAction: "detect-local" as const,
+          description: `已检测到可接入实例正在 ${localDetection.baseUrl} 运行，现在可以直接接入 manager。`,
+          primary: "接入检测到的实例",
+          secondary: "查看接入方式",
+          primaryAction: "detect-instances" as const,
           primaryTarget: "settings" as TabKey,
           secondaryTarget: "doctor" as TabKey,
           status: "可接入",
@@ -155,15 +155,15 @@ function getDeploymentCopy(
     }
 
     return {
-      eyebrow: "首次部署",
-      title: "部署 OpenClaw",
-      description: `当前未接入实例。${platformPlan.recommendedPlan}`,
-      primary: "检测本机并开始接入",
-      secondary: "查看其他部署方式",
-      primaryAction: "detect-local" as const,
+      eyebrow: "实例接入",
+      title: "接入一个可管理实例",
+      description: `当前还没有选中实例。${platformPlan.recommendedPlan}`,
+      primary: "检测可接入实例",
+      secondary: "查看接入方式",
+      primaryAction: "detect-instances" as const,
       primaryTarget: "settings" as TabKey,
       secondaryTarget: "doctor" as TabKey,
-      status: "未部署",
+      status: "未接入",
       accent: "primary" as const,
     };
   }
@@ -238,18 +238,18 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
       if (deploymentCopy.primaryAction !== "start-gateway") {
         setGatewayStartPhase("idle");
       }
-      if (deploymentCopy.primaryAction === "detect-local") {
+      if (deploymentCopy.primaryAction === "detect-instances") {
         if (localDetection?.exists) {
           await onAddDetectedLocal?.();
           await new Promise((resolve) => window.setTimeout(resolve, 120));
           await onRefreshRuntime?.();
           setActionMessage(localDetection.type === "wsl"
             ? "已接入检测到的 WSL2 OpenClaw，并已切到当前实例、刷新首页状态。"
-            : "已接入检测到的本机 OpenClaw，并已切到当前实例、刷新首页状态。");
+            : "已接入检测到的实例，并已切到当前实例、刷新首页状态。");
           return;
         }
         await onOpenAddInstance?.();
-        setActionMessage("已打开新增实例入口，并开始探测本机 OpenClaw。若检测成功，首页会直接给出一键接入入口。");
+        setActionMessage("已打开新增实例入口，并开始探测可接入实例。若检测成功，首页会直接给出接入入口。");
         return;
       }
       if (deploymentCopy.primaryAction === "start-gateway") {
@@ -391,12 +391,12 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
             <div className="deployment-meta-card">
               <div className="deployment-meta-label">当前实例</div>
               <div className="deployment-meta-value">{currentInstance ? currentInstance.name : "未接入"}</div>
-              <div className="deployment-meta-note">{currentInstance ? `${getInstanceTypeLabel(currentInstance.type)} · ${currentInstance.baseUrl}` : localDetection?.exists ? `${localDetection.type === "wsl" ? "已探测到 WSL2 实例" : "已探测到本机实例"}：${localDetection.baseUrl}` : "先部署或接入一个可管理实例"}</div>
+              <div className="deployment-meta-note">{currentInstance ? `${getInstanceTypeLabel(currentInstance.type)} · ${currentInstance.baseUrl}` : localDetection?.exists ? `${localDetection.type === "wsl" ? "已探测到 WSL2 实例" : "已探测到可接入实例"}：${localDetection.baseUrl}` : "先接入或选择一个要管理的实例"}</div>
             </div>
             <div className="deployment-meta-card">
               <div className="deployment-meta-label">Gateway</div>
               <div className="deployment-meta-value">{overviewGatewayLoading ? "读取中" : overviewGatewayRunning ? "运行中" : overviewError ? "读取失败" : "未运行 / 未读取"}</div>
-              <div className="deployment-meta-note">{overviewError ? `错误：${overviewError}` : localDetection?.error ? `本机探测：${localDetection.error}` : localDetection?.exists && localDetection.running ? `本机实例已就绪，可直接接入。${detectingLocal ? " 当前仍在刷新探测结果。" : ""}` : "首页状态卡应根据真实运行态自动切换，而不是永远展示安装入口。"}</div>
+              <div className="deployment-meta-note">{overviewError ? `错误：${overviewError}` : localDetection?.error ? `实例探测：${localDetection.error}` : localDetection?.exists && localDetection.running ? `已发现可接入实例，可直接加入当前管理列表。${detectingLocal ? " 当前仍在刷新探测结果。" : ""}` : "首页状态卡应根据真实实例状态自动切换，而不是默认假定本机实例已存在。"}</div>
             </div>
           </div>
           <div className="deployment-hero-actions">
@@ -423,12 +423,12 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
         </div>
         <div className="deployment-hero-side">
           <div className="deployment-side-panel">
-            <div className="deployment-side-title">推荐方案</div>
+            <div className="deployment-side-title">实例接入建议</div>
             <div className="deployment-side-summary">{platformPlan.recommendedPlan}</div>
             <ul className="deployment-side-list">
-              <li>macOS / Linux：优先选择 v2 Beta 推荐包后再接入实例</li>
-              <li>Windows：默认走 v2 Beta + WSL2 runtime</li>
-              <li>已安装用户：首页优先看运行状态、实例状态与修复入口</li>
+              <li>先明确要管理的是哪一个实例，再决定接入路径</li>
+              <li>本机、WSL2、Docker、NAS、远端实例都应被当作独立目标</li>
+              <li>已安装用户：首页优先看当前实例状态、Gateway 运行态与修复入口</li>
             </ul>
           </div>
         </div>
@@ -457,7 +457,7 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
             <div><strong>{currentInstance.name}</strong> · {currentInstance.baseUrl}</div>
           </div>
         ) : (
-          <div style={{ color: "var(--text-secondary)" }}>当前未选择实例。</div>
+          <div style={{ color: "var(--text-secondary)" }}>当前未选择实例；可先检测可接入实例，或手动新增一个明确的管理目标。</div>
         )}
       </div>
 

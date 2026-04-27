@@ -21,7 +21,7 @@ interface AppStoreState {
   settings: AppSettings;
   auditLogs: AuditLogEntry[];
   setInstances: (instances: AppInstance[]) => void;
-  setCurrentInstance: (instanceId: string) => void;
+  setCurrentInstance: (instanceId: string | null) => void;
   addInstance: (input: CreateInstanceInput) => AppInstance;
   deleteInstance: (instanceId: string) => void;
   updateSettings: (patch: Partial<AppSettings>) => void;
@@ -43,15 +43,17 @@ export const useAppStore = create<AppStoreState>()((set) => ({
     saveInstances(instances);
     set({ instances });
   },
-  setCurrentInstance: (instanceId: string) => {
+  setCurrentInstance: (instanceId: string | null) => {
     set((state: AppStoreState) => {
+      const hasTarget = instanceId ? state.instances.some((item: AppInstance) => item.id === instanceId) : false;
+      const resolvedCurrentId = hasTarget ? instanceId : state.instances[0]?.id || null;
       const nextInstances = state.instances.map((item: AppInstance) => ({
         ...item,
-        isCurrent: item.id === instanceId,
+        isCurrent: resolvedCurrentId ? item.id === resolvedCurrentId : false,
       }));
       saveInstances(nextInstances);
       return {
-        currentInstanceId: instanceId,
+        currentInstanceId: resolvedCurrentId,
         instances: nextInstances,
       };
     });

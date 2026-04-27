@@ -32,7 +32,7 @@ export interface ModelConnectivityResult {
 }
 
 function getModelCacheKey(instance?: AppInstance) {
-  return instance ? `${instance.type}:${instance.id}:${instance.baseUrl}` : "local:default";
+  return instance ? `${instance.type}:${instance.id}:${instance.baseUrl}` : "no-instance";
 }
 
 function isWebPreview() {

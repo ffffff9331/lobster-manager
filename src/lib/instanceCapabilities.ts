@@ -10,8 +10,12 @@ const INSTANCE_TYPE_LABELS: Record<AppInstanceType, string> = {
   remote: "远端",
 };
 
+export function hasExplicitInstance(instance?: InstanceLike): instance is Pick<AppInstance, "type"> {
+  return Boolean(instance);
+}
+
 export function isLocalInstance(instance?: InstanceLike): boolean {
-  return !instance || instance.type === "local";
+  return instance?.type === "local";
 }
 
 export function isManagedByHost(instance?: InstanceLike): boolean {
@@ -31,19 +35,25 @@ export function supportsDirectUninstall(instance?: InstanceLike): boolean {
 }
 
 export function getInstanceTypeLabel(type?: AppInstanceType): string {
-  if (!type) return "本机";
+  if (!type) return "未选择实例";
   return INSTANCE_TYPE_LABELS[type] || type;
 }
 
 export function getInstanceBoundaryHint(instance?: InstanceLike): string {
-  if (!instance || instance.type === "local" || instance.type === "wsl") {
+  if (!instance) {
+    return "请先选择实例。";
+  }
+  if (instance.type === "local" || instance.type === "wsl") {
     return "";
   }
   return "当前实例不是本机，请到对应机器或容器平台侧处理。";
 }
 
 export function getInstanceCapabilitySummary(instance?: InstanceLike): string {
-  if (!instance || instance.type === "local") {
+  if (!instance) {
+    return "请先选择实例后再查看能力范围。";
+  }
+  if (instance.type === "local") {
     return "支持本机宿主能力、配置目录直开、服务管理与本地安装。";
   }
   if (instance.type === "wsl") {
@@ -59,7 +69,10 @@ export function getInstanceCapabilitySummary(instance?: InstanceLike): string {
 }
 
 export function getInstanceBoundaryBadges(instance?: InstanceLike): string[] {
-  if (!instance || instance.type === "local") {
+  if (!instance) {
+    return ["未选择实例", "禁止默认回退", "请先显式选择"];
+  }
+  if (instance.type === "local") {
     return ["仅本机可用", "宿主能力可用", "桌面环境直连"];
   }
   if (instance.type === "wsl") {

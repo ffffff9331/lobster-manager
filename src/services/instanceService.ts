@@ -90,22 +90,12 @@ export function validateInstanceBaseUrl(
   return { valid: true, warning };
 }
 
-const defaultLocalInstance: AppInstance = {
-  id: "local-default",
-  name: "本机 OpenClaw",
-  type: "local",
-  baseUrl: "http://127.0.0.1:18789/",
-  status: "unknown",
-  isCurrent: true,
-  source: "manual",
-  notes: "默认本地实例",
-  apiBasePath: "/",
-  healthPath: "/health",
-  createdAt: now(),
-  updatedAt: now(),
-};
-
-const DEFAULT_INSTANCES = [defaultLocalInstance];
+function getDefaultBaseUrl(type: AppInstance["type"]) {
+  if (type === "local" || type === "wsl") {
+    return "http://127.0.0.1:18789/";
+  }
+  return "";
+}
 
 function normalizeInstanceRecord(input: Partial<AppInstance> | null | undefined): AppInstance | null {
   if (!input?.id || !input.name) {
@@ -120,7 +110,7 @@ function normalizeInstanceRecord(input: Partial<AppInstance> | null | undefined)
     id: input.id,
     name: input.name,
     type: normalizedType,
-    baseUrl: input.baseUrl || (normalizedType === "local" || normalizedType === "wsl" ? defaultLocalInstance.baseUrl : ""),
+    baseUrl: input.baseUrl || getDefaultBaseUrl(normalizedType),
     status: input.status || "unknown",
     apiKey: input.apiKey || "",
     isCurrent: Boolean(input.isCurrent),
@@ -134,7 +124,7 @@ function normalizeInstanceRecord(input: Partial<AppInstance> | null | undefined)
 }
 
 export function loadInstances(): AppInstance[] {
-  if (typeof window === "undefined") return DEFAULT_INSTANCES;
+  if (typeof window === "undefined") return [];
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -142,25 +132,26 @@ export function loadInstances(): AppInstance[] {
     const normalized = saved
       .map(normalizeInstanceRecord)
       .filter((item): item is AppInstance => Boolean(item));
-    const merged = normalized.length > 0 ? normalized : DEFAULT_INSTANCES;
-    const storedCurrentId = localStorage.getItem(CURRENT_KEY) || defaultLocalInstance.id;
-    const resolvedCurrentId = merged.some((item) => item.id === storedCurrentId)
+    const storedCurrentId = localStorage.getItem(CURRENT_KEY);
+    const resolvedCurrentId = storedCurrentId && normalized.some((item) => item.id === storedCurrentId)
       ? storedCurrentId
-      : merged[0]?.id || defaultLocalInstance.id;
+      : normalized[0]?.id || null;
 
-    if (resolvedCurrentId !== storedCurrentId) {
+    if (resolvedCurrentId) {
       localStorage.setItem(CURRENT_KEY, resolvedCurrentId);
+    } else {
+      localStorage.removeItem(CURRENT_KEY);
     }
 
-    const nextInstances = merged.map((item) => ({
+    const nextInstances = normalized.map((item) => ({
       ...item,
-      isCurrent: item.id === resolvedCurrentId,
+      isCurrent: resolvedCurrentId ? item.id === resolvedCurrentId : false,
     }));
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextInstances));
     return nextInstances;
   } catch {
-    return DEFAULT_INSTANCES;
+    return [];
   }
 }
 
@@ -170,19 +161,27 @@ export function saveInstances(instances: AppInstance[]) {
   const normalized = instances
     .map(normalizeInstanceRecord)
     .filter((item): item is AppInstance => Boolean(item));
-  const resolvedCurrentId = normalized.find((item) => item.isCurrent)?.id || normalized[0]?.id || defaultLocalInstance.id;
-  const nextInstances = (normalized.length > 0 ? normalized : DEFAULT_INSTANCES).map((item) => ({
+  const resolvedCurrentId = normalized.find((item) => item.isCurrent)?.id || normalized[0]?.id || null;
+  const nextInstances = normalized.map((item) => ({
     ...item,
-    isCurrent: item.id === resolvedCurrentId,
+    isCurrent: resolvedCurrentId ? item.id === resolvedCurrentId : false,
   }));
 
-  localStorage.setItem(CURRENT_KEY, resolvedCurrentId);
+  if (resolvedCurrentId) {
+    localStorage.setItem(CURRENT_KEY, resolvedCurrentId);
+  } else {
+    localStorage.removeItem(CURRENT_KEY);
+  }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(nextInstances));
 }
 
-export function setCurrentInstance(instanceId: string) {
+export function setCurrentInstance(instanceId: string | null) {
   if (typeof window === "undefined") return;
-  localStorage.setItem(CURRENT_KEY, instanceId);
+  if (instanceId) {
+    localStorage.setItem(CURRENT_KEY, instanceId);
+  } else {
+    localStorage.removeItem(CURRENT_KEY);
+  }
 }
 
 export function loadSettings(): PersistedSettings {
