@@ -292,8 +292,8 @@ async function detectHostLocal(): Promise<DetectedInstance | null> {
 async function detectWsl(): Promise<DetectedInstance | null> {
   if (!isWindows() || !canUseTauriInvoke()) return null;
   try {
-    const versionResult = await readWslCommand("command -v openclaw >/dev/null 2>&1 && openclaw --version");
-    if (!versionResult.success) return null;
+    const versionResult = await readWslCommand("openclaw --version");
+    if (!versionResult.success || !versionResult.output.trim()) return null;
     const statusResult = await readWslCommand("openclaw gateway status --json");
     const running = statusResult.success && parseGatewayRunningFromJson(statusResult.output);
     return {
