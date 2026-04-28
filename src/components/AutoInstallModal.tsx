@@ -17,10 +17,28 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
 
   const targetInstance = useMemo(() => {
     if (installTarget === "local") {
-      return currentInstance || { id: "temp-local", name: "本地", type: "local" as const, baseUrl: "http://localhost:18789", createdAt: Date.now() };
+      return currentInstance || {
+        id: "temp-local",
+        name: "本地",
+        type: "local" as const,
+        baseUrl: "http://localhost:18789",
+        status: "unknown" as const,
+        apiBasePath: "/api",
+        healthPath: "/health",
+        createdAt: new Date().toISOString(),
+      };
     }
     if (installTarget === "wsl") {
-      return { id: "temp-wsl", name: "WSL2", type: "wsl" as const, baseUrl: "http://localhost:18789", createdAt: Date.now() };
+      return {
+        id: "temp-wsl",
+        name: "WSL2",
+        type: "wsl" as const,
+        baseUrl: "http://localhost:18789",
+        status: "unknown" as const,
+        apiBasePath: "/api",
+        healthPath: "/health",
+        createdAt: new Date().toISOString(),
+      };
     }
     return undefined;
   }, [installTarget, currentInstance]);
