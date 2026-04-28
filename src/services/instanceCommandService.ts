@@ -54,18 +54,51 @@ function getDockerContainerName(instance: AppInstance): string {
   return (instance as AppInstance & { containerName?: string }).containerName || "openclaw";
 }
 
+// 检测 pairing required 错误并提取 requestId
+function extractPairingRequestId(error?: string): string | null {
+  if (!error) return null;
+  const match = error.match(/requestId[:\s]+([a-f0-9-]{36})/i);
+  return match ? match[1] : null;
+}
+
+// 自动批准设备配对
+async function autoApproveDevice(instance: AppInstance | undefined, requestId: string): Promise<boolean> {
+  try {
+    let result: CommandResult;
+    if (!instance || instance.type === "local") {
+      result = await dispatchLocalCommand(`openclaw devices approve ${requestId}`);
+    } else if (instance.type === "wsl") {
+      result = await dispatchWslCommand(`openclaw devices approve ${requestId}`);
+    } else {
+      return false; // 远程实例无法自动批准
+    }
+    return result.success;
+  } catch {
+    return false;
+  }
+}
+
 export async function readFromInstance(instance: AppInstance | undefined, command: InstanceReadCommand): Promise<CommandResult> {
   if (instance) {
+    let result: CommandResult;
     if (instance.type === "local") {
-      return requestLocalRead(command);
+      result = await requestLocalRead(command);
+    } else if (instance.type === "wsl") {
+      result = await readWslCommand(command);
+    } else if (instance.type === "docker") {
+      result = await readDockerCommand(getDockerContainerName(instance), command);
+    } else {
+      result = await requestRemoteCommand(instance, command);
     }
-    if (instance.type === "wsl") {
-      return readWslCommand(command);
+    // 自动配对重试
+    if (!result.success) {
+      const requestId = extractPairingRequestId(result.error || result.output);
+      if (requestId) {
+        const approved = await autoApproveDevice(instance, requestId);
+        if (approved) return readFromInstance(instance, command);
+      }
     }
-    if (instance.type === "docker") {
-      return readDockerCommand(getDockerContainerName(instance), command);
-    }
-    return requestRemoteCommand(instance, command);
+    return result;
   }
 
   if (shouldRequireExplicitInstance(command)) {
@@ -77,16 +110,25 @@ export async function readFromInstance(instance: AppInstance | undefined, comman
 
 export async function dispatchToInstance(instance: AppInstance | undefined, command: InstanceDispatchCommand): Promise<CommandResult> {
   if (instance) {
+    let result: CommandResult;
     if (instance.type === "local") {
-      return requestLocalDispatch(command);
+      result = await requestLocalDispatch(command);
+    } else if (instance.type === "wsl") {
+      result = await dispatchWslCommand(command);
+    } else if (instance.type === "docker") {
+      result = await dispatchDockerCommand(getDockerContainerName(instance), command);
+    } else {
+      result = await requestRemoteCommand(instance, command);
     }
-    if (instance.type === "wsl") {
-      return dispatchWslCommand(command);
+    // 自动配对重试
+    if (!result.success) {
+      const requestId = extractPairingRequestId(result.error || result.output);
+      if (requestId) {
+        const approved = await autoApproveDevice(instance, requestId);
+        if (approved) return dispatchToInstance(instance, command);
+      }
     }
-    if (instance.type === "docker") {
-      return dispatchDockerCommand(getDockerContainerName(instance), command);
-    }
-    return requestRemoteCommand(instance, command);
+    return result;
   }
 
   if (shouldRequireExplicitInstance(command)) {
