@@ -297,6 +297,8 @@ fn is_read_only_command(command: &str) -> bool {
         || normalized.starts_with("docker ps ")
         || normalized.starts_with("docker port ")
         || normalized.starts_with("docker exec ") && is_docker_exec_read_only(normalized)
+        || normalized.starts_with("cat ") && normalized.contains(".openclaw")
+        || normalized.starts_with("type \"") && normalized.contains(".openclaw")
 }
 
 fn is_docker_exec_read_only(command: &str) -> bool {

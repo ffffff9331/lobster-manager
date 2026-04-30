@@ -183,13 +183,43 @@ export async function getGatewayDashboardUrl(instance?: AppInstance) {
     }
   }
 
-  // 添加 token 参数
-  if (instance.apiKey) {
+  // 读取 gateway token：优先用 instance.apiKey，否则从配置文件直接解析
+  let token = instance.apiKey;
+  if (!token) {
+    try {
+      token = await readGatewayTokenFromConfig(instance);
+    } catch {
+      // 读取失败，不带 token
+    }
+  }
+
+  if (token) {
     const separator = url.includes('?') ? '&' : '?';
-    url = `${url}${separator}token=${encodeURIComponent(instance.apiKey)}`;
+    url = `${url}${separator}token=${encodeURIComponent(token)}`;
   }
 
   return url;
+}
+
+/** 直接读取配置文件解析 gateway token，绕过 CLI 脱敏 */
+async function readGatewayTokenFromConfig(instance: AppInstance): Promise<string> {
+  // 跨平台读取配置文件：Mac/Linux 用 cat，Windows 用 type
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const isWin = ua.includes("Windows") || ua.includes("Win64");
+  const readCmd = isWin ? `type "%USERPROFILE%\\.openclaw\\openclaw.json"` : `cat ~/.openclaw/openclaw.json`;
+
+  const result = await readFromInstance(instance, readCmd as any);
+  if (!result.success || !result.output.trim()) {
+    throw new Error("无法读取配置文件");
+  }
+
+  // 解析 JSON，提取 gateway.auth.token
+  const config = JSON.parse(result.output);
+  const token = config?.gateway?.auth?.token;
+  if (typeof token === "string" && token.length > 0 && !token.includes("REDACTED")) {
+    return token;
+  }
+  throw new Error("配置文件中无有效 token");
 }
 
 export async function openGatewayDashboard(instance?: AppInstance) {
