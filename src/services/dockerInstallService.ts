@@ -1,7 +1,8 @@
-import { dispatchDetachedLocalCommand } from "./commandService";
+import { dispatchDetachedLocalCommand, readLocalCommand } from "./commandService";
 import { isWindows } from "../lib/platform";
 
-export type InstallTarget = "local" | "wsl" | "docker";
+export type InstallTarget = "local" | "docker";
+const DOCKER_GATEWAY_PORT = 18789;
 
 export interface DockerInstallResult {
   success: boolean;
@@ -11,7 +12,7 @@ export interface DockerInstallResult {
 
 async function checkDockerInstalled(): Promise<boolean> {
   try {
-    const result = await dispatchDetachedLocalCommand("docker --version");
+    const result = await readLocalCommand("docker --version");
     return result.success;
   } catch {
     return false;
@@ -20,7 +21,7 @@ async function checkDockerInstalled(): Promise<boolean> {
 
 async function checkDockerComposeInstalled(): Promise<boolean> {
   try {
-    const result = await dispatchDetachedLocalCommand("docker compose version");
+    const result = await readLocalCommand("docker compose version");
     return result.success;
   } catch {
     return false;
@@ -45,13 +46,13 @@ services:
     container_name: openclaw
     restart: unless-stopped
     ports:
-      - "18789:18789"
+      - "${DOCKER_GATEWAY_PORT}:${DOCKER_GATEWAY_PORT}"
     volumes:
       - ./openclaw-data:/root/.openclaw
       - ./openclaw-workspace:/root/.openclaw/workspace
     environment:
       - TZ=Asia/Shanghai
-      - OPENCLAW_GATEWAY_PORT=18789
+      - OPENCLAW_GATEWAY_PORT=${DOCKER_GATEWAY_PORT}
       - OPENCLAW_GATEWAY_HOST=0.0.0.0
 `;
 
@@ -61,7 +62,10 @@ services:
       ? `mkdir "${workDir}\\openclaw-data" "${workDir}\\openclaw-workspace" 2>nul`
       : `mkdir -p "${workDir}/openclaw-data" "${workDir}/openclaw-workspace"`;
     
-    await dispatchDetachedLocalCommand(mkdirCmd);
+    const mkdirResult = await dispatchDetachedLocalCommand(mkdirCmd);
+    if (!mkdirResult.success) {
+      return { success: false, output: mkdirResult.output, error: mkdirResult.error || "创建 Docker 工作目录失败" };
+    }
 
     // 3. 写入 docker-compose.yml
     const composeFile = isWindows() 
@@ -72,7 +76,10 @@ services:
       ? `echo ${composeContent.replace(/\n/g, "^")} > "${composeFile}"`
       : `cat > "${composeFile}" << 'EOF'\n${composeContent}\nEOF`;
     
-    await dispatchDetachedLocalCommand(writeCmd);
+    const writeResult = await dispatchDetachedLocalCommand(writeCmd);
+    if (!writeResult.success) {
+      return { success: false, output: writeResult.output, error: writeResult.error || "写入 docker-compose.yml 失败" };
+    }
 
     // 4. 启动容器
     const startCmd = `cd "${workDir}" && docker compose up -d`;

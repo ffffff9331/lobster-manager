@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { openPath } from "@tauri-apps/plugin-opener";
 import { supportsHostFileOps } from "../lib/instanceCapabilities";
 import type { AppInstance, CommandResult } from "../types/core";
-import { dispatchToInstance } from "./instanceCommandService";
+import { dispatchToInstance, readFromInstance } from "./instanceCommandService";
 
 const NO_INSTANCE_SKILL_MESSAGE = "请先选择要操作的实例，技能页不再默认回退到本机 local。";
 
@@ -51,7 +51,7 @@ export async function listSkills(instance?: AppInstance): Promise<SkillItem[]> {
     throw new Error(NO_INSTANCE_SKILL_MESSAGE);
   }
   const command = "openclaw skills list";
-  const result = await dispatchToInstance(instance, command);
+  const result = await readFromInstance(instance, command);
   if (!result.success) {
     throw new Error(result.error || result.output || "读取技能列表失败");
   }

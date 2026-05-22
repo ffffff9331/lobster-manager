@@ -101,7 +101,7 @@ function buildEditCronCommand(jobId: string, form: CronJobFormState): string {
     "openclaw",
     "cron",
     "edit",
-    id,
+    shellQuote(id),
     ...buildCronMutationParts(form),
     ...(form.enabled ? ["--enable"] : ["--disable"]),
   ].join(" ");
@@ -145,7 +145,7 @@ export async function listCronRuns(jobId: string, instance?: AppInstance): Promi
   if (!id) {
     throw new Error("任务 ID 不能为空");
   }
-  const output = await readRequired(instance, `openclaw cron runs --id ${id} --limit 20`, "读取定时任务运行记录失败");
+  const output = await readRequired(instance, `openclaw cron runs --id ${shellQuote(id)} --limit 20`, "读取定时任务运行记录失败");
   const result = parseJsonOutput<{ entries?: CronRunEntry[] }>(output, "解析定时任务运行记录失败");
   return Array.isArray(result.entries) ? result.entries : [];
 }
@@ -164,7 +164,7 @@ export async function setCronJobEnabled(jobId: string, enabled: boolean, instanc
   if (!id) {
     throw new Error("任务 ID 不能为空");
   }
-  const command = enabled ? `openclaw cron enable ${id}` : `openclaw cron disable ${id}`;
+  const command = enabled ? `openclaw cron enable ${shellQuote(id)}` : `openclaw cron disable ${shellQuote(id)}`;
   await dispatchRequired(instance, command, enabled ? "启用定时任务失败" : "禁用定时任务失败");
 }
 
@@ -173,7 +173,7 @@ export async function removeCronJob(jobId: string, instance?: AppInstance): Prom
   if (!id) {
     throw new Error("任务 ID 不能为空");
   }
-  await dispatchRequired(instance, `openclaw cron rm ${id}`, "删除定时任务失败");
+  await dispatchRequired(instance, `openclaw cron rm ${shellQuote(id)}`, "删除定时任务失败");
 }
 
 export async function runCronJobNow(jobId: string, instance?: AppInstance): Promise<void> {
@@ -181,5 +181,5 @@ export async function runCronJobNow(jobId: string, instance?: AppInstance): Prom
   if (!id) {
     throw new Error("任务 ID 不能为空");
   }
-  await dispatchRequired(instance, `openclaw cron run ${id}`, "立即运行定时任务失败");
+  await dispatchRequired(instance, `openclaw cron run ${shellQuote(id)}`, "立即运行定时任务失败");
 }

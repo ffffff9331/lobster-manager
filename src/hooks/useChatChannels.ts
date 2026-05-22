@@ -202,13 +202,14 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
   );
 
   const syncChannelRuntimeState = useCallback(async () => {
-    await applyChannelRuntimeChanges(currentInstance);
+    const runtimeMessage = await applyChannelRuntimeChanges(currentInstance);
     await loadChannelsStatus();
+    return runtimeMessage;
   }, [currentInstance, loadChannelsStatus]);
 
   const afterSave = useCallback(async () => {
     setSelectedChannel(null);
-    await syncChannelRuntimeState();
+    return await syncChannelRuntimeState();
   }, [syncChannelRuntimeState]);
 
   const createSaveAction = useCallback(
@@ -221,7 +222,7 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
         recordAudit({
           action: "保存渠道配置",
           target: loadingKey,
-          result: "成功",
+          result: "已保存",
           detail: successMessage,
         });
       } catch (e) {
@@ -271,7 +272,7 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
         recordAudit({
           action: newEnabled ? "启用渠道" : "关闭渠道",
           target: channel.id,
-          result: "成功",
+          result: "已完成",
           detail: channel.runtimeSessionKey || channel.name,
         });
       } catch (e) {

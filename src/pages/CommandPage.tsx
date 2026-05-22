@@ -29,7 +29,7 @@ const quickCommands: CustomCommandItem[] = [
   { cmd: "openclaw doctor", label: "常规诊断", desc: "运行默认健康检查", builtIn: true },
   { cmd: "openclaw status", label: "系统状态", desc: "查看当前系统运行状态", builtIn: true },
   { cmd: "openclaw gateway status", label: "Gateway状态", desc: "查看 Gateway 是否在线", builtIn: true },
-  { cmd: "openclaw gateway restart", label: "重启Gateway", desc: "重启当前实例的 Gateway 服务", builtIn: true, action: "restartGateway" },
+  { cmd: "openclaw gateway restart", label: "跳转 Gateway 重启", desc: "仅引导到 Gateway 页执行重启/重载", builtIn: true, action: "restartGateway" },
   { cmd: "openclaw sessions", label: "会话列表", desc: "查看当前活跃会话与模型", builtIn: true },
   { cmd: "tmux ls 2>&1 || true", label: "后台任务", desc: "查看所有 tmux 会话", builtIn: true },
 ];
@@ -76,7 +76,7 @@ export function CommandPage({ commandState }: CommandPageProps) {
         </div>
 
         <p style={{ color: "var(--text-secondary)", marginBottom: "20px" }}>
-          点击执行后，下方回馈窗口会显示这次指令返回的输出内容。Doctor 类命令会改为后台投递，并提示到日志页查看结果。
+          点击执行后，下方回馈窗口会显示这次指令返回的输出内容。Doctor 类命令会改为后台执行；“跳转 Gateway 重启”只做入口引导。
         </p>
 
         <button className="btn btn-secondary" style={{ marginBottom: "20px" }} onClick={() => setShowAddModal(true)}>

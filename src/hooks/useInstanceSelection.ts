@@ -28,6 +28,7 @@ export function useInstanceSelection() {
     exists: boolean;
     running: boolean;
     baseUrl: string;
+    bridgeBaseUrl?: string;
     type?: AppInstance["type"];
     error?: string;
     detail?: string;
@@ -75,6 +76,7 @@ export function useInstanceSelection() {
           exists: first.exists,
           running: first.running,
           baseUrl: first.baseUrl,
+          bridgeBaseUrl: first.bridgeBaseUrl,
           type: first.type,
           detail: first.version || first.detail,
           error: first.error,
@@ -171,6 +173,7 @@ export function useInstanceSelection() {
       name: `${label} OpenClaw（自动检测）`,
       type: detectedType,
       baseUrl: localInstanceStatus.baseUrl,
+      bridgeBaseUrl: localInstanceStatus.bridgeBaseUrl,
       apiBasePath: "/",
       healthPath: "/health",
       notes: `通过自动检测添加（${label}）`,

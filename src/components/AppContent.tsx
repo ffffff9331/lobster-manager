@@ -32,6 +32,7 @@ interface AppContentProps {
     exists: boolean;
     running: boolean;
     baseUrl: string;
+    bridgeBaseUrl?: string;
     error?: string;
   } | null;
   darkMode: boolean;
@@ -156,6 +157,7 @@ function OverviewTabContent({
     exists: boolean;
     running: boolean;
     baseUrl: string;
+    bridgeBaseUrl?: string;
     error?: string;
   } | null;
   detectingLocal: boolean;

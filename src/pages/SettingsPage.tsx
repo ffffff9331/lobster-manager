@@ -91,14 +91,19 @@ function BackupOptionToggle({ label, checked, onChange }: { label: string; check
   );
 }
 
-function SettingsSectionTitle({ children, danger = false }: { children: string; danger?: boolean }) {
-  return <h3 style={{ marginTop: "20px", marginBottom: "12px", color: danger ? "var(--error)" : undefined }}>{children}</h3>;
+function SettingsSectionTitle({ children, danger = false, description }: { children: string; danger?: boolean; description?: string }) {
+  return (
+    <div style={{ marginTop: 20, marginBottom: 12 }}>
+      <h3 style={{ color: danger ? "var(--error)" : undefined }}>{children}</h3>
+      {description ? <div style={{ marginTop: 4, color: "var(--text-secondary)", fontSize: 13 }}>{description}</div> : null}
+    </div>
+  );
 }
 
 function CurrentInstanceSection({ currentInstance }: { currentInstance?: SettingsPageState["currentInstance"] }) {
   return (
     <>
-      <SettingsSectionTitle>当前实例</SettingsSectionTitle>
+      <SettingsSectionTitle description="高级操作都会作用于当前实例；先确认目标，避免误操作。">当前实例</SettingsSectionTitle>
       <div className="settings-list">
         <div className="setting-item">
           <div className="setting-info">
@@ -117,7 +122,7 @@ function CurrentInstanceSection({ currentInstance }: { currentInstance?: Setting
 function SecuritySettingsSection({ settings, onToggleWhitelist, onToggleFileAccess }: { settings: SettingsState; onToggleWhitelist: () => void; onToggleFileAccess: () => void }) {
   return (
     <>
-      <SettingsSectionTitle>安全设置</SettingsSectionTitle>
+      <SettingsSectionTitle description="控制实例侧安全策略，保存后以 OpenClaw 实际配置为准。">安全</SettingsSectionTitle>
       <div className="settings-list">
         <div className="setting-item">
           <div className="setting-info">
@@ -163,7 +168,7 @@ function AppSettingsSection({
 }) {
   return (
     <>
-      <SettingsSectionTitle>应用设置</SettingsSectionTitle>
+      <SettingsSectionTitle description="控制 manager 自身的网络发现与接入约束。">发现与接入</SettingsSectionTitle>
       <div className="settings-list">
         <div className="setting-item">
           <div className="setting-info">
@@ -287,7 +292,7 @@ function BackupSection({
 
   return (
     <>
-      <SettingsSectionTitle>备份</SettingsSectionTitle>
+      <SettingsSectionTitle description="创建、校验与还原当前实例配置；还原属于高风险动作。">备份</SettingsSectionTitle>
       <div className="settings-list">
         <div className="setting-item" style={{ alignItems: "flex-start", flexDirection: "column" }}>
           <div className="setting-info" style={{ width: "100%" }}>
@@ -415,7 +420,7 @@ function AdvancedSettingsSection({ currentInstance, configPath, dataPath, darkMo
 
   return (
     <>
-      <SettingsSectionTitle>高级设置</SettingsSectionTitle>
+      <SettingsSectionTitle description="本机目录、主题和其他低频设置。">本机与外观</SettingsSectionTitle>
       <div className="settings-list">
         <div className="setting-item">
           <div className="setting-info">
@@ -448,7 +453,7 @@ function DangerZoneSection({ currentInstance, setShowUninstallConfirm }: { curre
 
   return (
     <>
-      <SettingsSectionTitle danger>危险区域</SettingsSectionTitle>
+      <SettingsSectionTitle danger description="只对支持本机文件/命令操作的实例开放。">危险区域</SettingsSectionTitle>
       <div className="settings-list">
         <div className="setting-item" style={{ border: "1px solid var(--error)", borderRadius: "8px", padding: "12px" }}>
           <div className="setting-info">
@@ -506,11 +511,13 @@ export function SettingsPage({ darkMode, setDarkMode, settingsState }: SettingsP
       <div className="card">
         <div className="card-header">
           <Settings size={22} />
-          <h2>设置</h2>
+          <h2>高级</h2>
+        </div>
+        <div style={{ color: "var(--text-secondary)", marginBottom: 12 }}>
+          这里放低频但完整的能力：安全、发现、备份、本机目录、卸载。常用操作请优先回到概览、实例或模型页。
         </div>
 
         <CurrentInstanceSection currentInstance={currentInstance} />
-        <SecuritySettingsSection settings={settings} onToggleWhitelist={onToggleWhitelist} onToggleFileAccess={onToggleFileAccess} />
         <AppSettingsSection
           appSettings={appSettings}
           onToggleLanAccess={onToggleLanAccess}
@@ -521,6 +528,7 @@ export function SettingsPage({ darkMode, setDarkMode, settingsState }: SettingsP
           lanDiscoveryStatus={lanDiscoveryStatus}
           lanDiscoveryResults={lanDiscoveryResults}
         />
+        <SecuritySettingsSection settings={settings} onToggleWhitelist={onToggleWhitelist} onToggleFileAccess={onToggleFileAccess} />
         <BackupSection
           backupStatus={backupStatus}
           backupCommandOutput={backupCommandOutput}

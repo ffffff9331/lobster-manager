@@ -35,17 +35,18 @@ interface NavItem {
   key: TabKey;
   label: string;
   icon: LucideIcon;
+  group: "core" | "manage" | "advanced";
 }
 
 const staticNavItems: NavItem[] = [
-  { key: "overview", label: "总览", icon: House },
-  { key: "chat", label: "对话工具", icon: MessageSquare },
-  { key: "doctor", label: "测试诊断", icon: Wrench },
-  { key: "models", label: "模型", icon: Cpu },
-  { key: "tasks", label: "任务", icon: ListTodo },
-  { key: "skills", label: "技能", icon: Puzzle },
-  { key: "applogs", label: "App日志", icon: FileText },
-  { key: "settings", label: "设置", icon: Settings },
+  { key: "overview", label: "概览", icon: House, group: "core" },
+  { key: "chat", label: "对话工具", icon: MessageSquare, group: "core" },
+  { key: "doctor", label: "安装与修复", icon: Wrench, group: "manage" },
+  { key: "models", label: "模型", icon: Cpu, group: "manage" },
+  { key: "tasks", label: "定时任务", icon: ListTodo, group: "advanced" },
+  { key: "skills", label: "技能", icon: Puzzle, group: "advanced" },
+  { key: "applogs", label: "日志", icon: FileText, group: "advanced" },
+  { key: "settings", label: "高级", icon: Settings, group: "advanced" },
 ];
 
 export function AppSidebar({
@@ -63,9 +64,15 @@ export function AppSidebar({
   gatewayIcon: GatewayIcon,
 }: AppSidebarProps) {
   const navItems: NavItem[] = [
-    staticNavItems[0],
-    { key: "gateway", label: "Gateway", icon: GatewayIcon },
-    ...staticNavItems.slice(1),
+    ...staticNavItems.slice(0, 3),
+    { key: "gateway", label: "实例", icon: GatewayIcon, group: "manage" },
+    ...staticNavItems.slice(3),
+  ];
+
+  const groupedNavItems = [
+    { title: "主线", key: "core", items: navItems.filter((item) => item.group === "core") },
+    { title: "管理", key: "manage", items: navItems.filter((item) => item.group === "manage") },
+    { title: "高级", key: "advanced", items: navItems.filter((item) => item.group === "advanced") },
   ];
 
   return (
@@ -78,11 +85,16 @@ export function AppSidebar({
       </div>
 
       <nav className="sidebar-nav">
-        {navItems.map(({ key, label, icon: Icon }) => (
-          <button key={key} className={`nav-item ${activeTab === key ? "active" : ""}`} onClick={() => setActiveTab(key)}>
-            <Icon size={20} />
-            <span>{label}</span>
-          </button>
+        {groupedNavItems.map((group) => (
+          <div key={group.key} className="sidebar-nav-group">
+            <div className="sidebar-nav-group-title">{group.title}</div>
+            {group.items.map(({ key, label, icon: Icon }) => (
+              <button key={key} className={`nav-item ${activeTab === key ? "active" : ""}`} onClick={() => setActiveTab(key)}>
+                <Icon size={20} />
+                <span>{label}</span>
+              </button>
+            ))}
+          </div>
         ))}
       </nav>
 

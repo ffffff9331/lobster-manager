@@ -43,11 +43,19 @@ export async function requestViaInstance(
     headers.Authorization = `Bearer ${instance.apiKey.trim()}`;
   }
 
+  const bodyPayload =
+    options.command || options.body
+      ? {
+          ...(options.body && typeof options.body === "object" ? options.body as Record<string, unknown> : {}),
+          ...(options.command ? { command: options.command, accessMode: options.accessMode ?? "dispatch" } : {}),
+        }
+      : undefined;
+
   try {
     const response = await fetch(`${baseUrl}${options.path}`, {
-      method: options.method || "GET",
+      method: options.method || (options.command ? "POST" : "GET"),
       headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      body: bodyPayload ? JSON.stringify(bodyPayload) : undefined,
     });
 
     const contentType = response.headers.get("content-type") || "";

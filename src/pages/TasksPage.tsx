@@ -165,7 +165,7 @@ const CronRunsSection = memo(function CronRunsSection({ selectedCronJobId, cronR
                 <div>运行时间：{formatDateTime(entry.runAtMs)}</div>
                 <div>耗时：{formatDuration(entry.durationMs)}</div>
                 <div>下次运行：{formatDateTime(entry.nextRunAtMs)}</div>
-                <div>投递状态：{entry.deliveryStatus || "—"}</div>
+                <div>执行状态：{entry.deliveryStatus || "—"}</div>
               </div>
             </div>
           ))

@@ -11,7 +11,7 @@ const CUSTOM_COMMANDS_KEY = "customCommands";
 
 function buildCommandResult(command: string, result: { success: boolean; output?: string | null; error?: string | null }): CommandResultState {
   const output = (result.output || result.error || "").trim();
-  const fallbackOutput = result.success ? "命令执行成功（无文本输出）" : "命令执行失败（无文本输出）";
+  const fallbackOutput = result.success ? "命令执行完成（无文本输出）" : "命令执行失败（无文本输出）";
 
   return {
     cmd: command,

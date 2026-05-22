@@ -1,6 +1,6 @@
 import type { AppInstance } from "../types/core";
 import { isLocalInstance } from "../lib/instanceCapabilities";
-import { dispatchToInstance } from "./instanceCommandService";
+import { controlGateway } from "./gatewayService";
 
 const NO_INSTANCE_CHANNEL_RUNTIME_MESSAGE = "请先选择要操作的实例，频道 runtime 变更不再默认回退到本机 local。";
 
@@ -15,11 +15,8 @@ export async function applyChannelRuntimeChanges(instance?: AppInstance): Promis
 
   if (isLocalInstance(instance)) {
     try {
-      const result = await dispatchToInstance(instance, "openclaw gateway restart");
-      if (result.success) {
-        return "频道配置已保存，Gateway 正在重载。";
-      }
-      return `频道配置已保存，但 Gateway 重载失败：${result.error || "未知错误"}`;
+      await controlGateway("restart", instance);
+      return "频道配置已保存，Gateway 正在重载。";
     } catch {
       return "频道配置已保存；Gateway 重载失败，请手动到 Gateway 页重启。";
     }

@@ -145,6 +145,7 @@ function App() {
               exists: Boolean(localInstanceStatus.exists),
               running: Boolean(localInstanceStatus.running),
               baseUrl: localInstanceStatus.baseUrl,
+              bridgeBaseUrl: localInstanceStatus.bridgeBaseUrl,
               error: localInstanceStatus.error || undefined,
             } : null}
             detectedInstances={detectedInstances}

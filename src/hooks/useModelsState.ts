@@ -185,7 +185,7 @@ export function useModelsState({ currentInstance }: UseModelsStateOptions): Mode
       setNewModelConfig(EMPTY_MODEL_FORM);
       setAddModelProviderMode("new");
       await loadModelConfigs();
-      setModelsStatus("模型添加成功，Gateway 将自动重载以生效");
+      setModelsStatus("模型已添加，Gateway 将自动重载以生效");
     } catch (e) {
       setModelsError(formatActionError("添加失败", e));
     } finally {
@@ -218,7 +218,7 @@ export function useModelsState({ currentInstance }: UseModelsStateOptions): Mode
       if (currentModelProvider === editingModel.provider && currentModel === editingModel.id) {
         await loadCurrentModel();
       }
-      setModelsStatus("模型更新成功，Gateway 将自动重载以生效");
+      setModelsStatus("模型已更新，Gateway 将自动重载以生效");
     } catch (e) {
       setModelsError(formatActionError("更新失败", e));
     } finally {

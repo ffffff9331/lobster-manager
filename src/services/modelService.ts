@@ -188,7 +188,8 @@ export async function loadCurrentModel(instance?: AppInstance): Promise<CurrentM
 
 export async function addModelConfig(newModelConfig: ModelFormState, instance?: AppInstance, targetProvider?: string) {
   if (!instance) throw new Error(NO_INSTANCE_MODELS_MESSAGE);
-  if (!newModelConfig.name || !newModelConfig.id || !newModelConfig.baseUrl) return;
+  if (!newModelConfig.name.trim() || !newModelConfig.id.trim()) return;
+  if (!targetProvider && !newModelConfig.baseUrl.trim()) return;
   const providerName = targetProvider || `custom-${Date.now()}`;
   if (targetProvider) {
     // 追加到已有 provider 的 models 列表
@@ -237,11 +238,32 @@ export async function saveModelEdit(editingModel: ModelConfig, form: ModelFormSt
   if (!instance) throw new Error(NO_INSTANCE_MODELS_MESSAGE);
   validateModelForm(form);
   const provider = editingModel.provider;
-  const providerConfig = buildProviderConfig(form);
-  if (!providerConfig.apiKey) {
-    delete (providerConfig as { apiKey?: string }).apiKey;
+  const config = await getParsedModelsConfig(instance);
+  const existingProviderConfig = config.providers?.[provider];
+  const nextApiKey = form.apiKey.trim() || existingProviderConfig?.apiKey || "";
+  const mergedProviderConfig = {
+    ...existingProviderConfig,
+    baseUrl: form.baseUrl.trim(),
+    apiKey: nextApiKey,
+    api: existingProviderConfig?.api || "openai-completions",
+    models: Array.isArray(existingProviderConfig?.models)
+      ? existingProviderConfig.models.map((model: any) =>
+          model?.id === editingModel.id
+            ? {
+                ...model,
+                id: form.id.trim(),
+                name: form.name.trim(),
+                contextWindow: parseNumberField(form.contextWindow, "上下文窗口") ?? 128000,
+                maxTokens: parseNumberField(form.maxTokens, "最大输出") ?? 8192,
+              }
+            : model,
+        )
+      : buildProviderConfig(form).models,
+  };
+  if (!mergedProviderConfig.apiKey) {
+    delete (mergedProviderConfig as { apiKey?: string }).apiKey;
   }
-  await dispatchModelCommand(instance, `openclaw config set ${getModelProviderPath(provider)} ${shellQuote(JSON.stringify(providerConfig))}`);
+  await dispatchModelCommand(instance, `openclaw config set ${getModelProviderPath(provider)} ${shellQuote(JSON.stringify(mergedProviderConfig))}`);
   invalidateModelCache(instance);
 }
 
@@ -317,7 +339,7 @@ export async function testModelConnectivity(model: ModelConfig): Promise<ModelCo
   for (const url of urls) {
     try {
       const response = await fetch(url, { method: "GET", headers });
-      if (response.ok) return { ok: true, status: response.status, message: `连通成功：${new URL(url).pathname || "/"}（HTTP ${response.status}）` };
+      if (response.ok) return { ok: true, status: response.status, message: `连通已确认：${new URL(url).pathname || "/"}（HTTP ${response.status}）` };
       if ([401, 403].includes(response.status)) {
         return { ok: false, authFailed: true, status: response.status, message: `目标可达但鉴权失败（HTTP ${response.status}），请检查 API Key` };
       }

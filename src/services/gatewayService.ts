@@ -171,7 +171,7 @@ export async function getGatewayDashboardUrl(instance?: AppInstance) {
 
   const result = await readFromInstance(instance, "openclaw gateway status");
 
-  let url = instance.baseUrl;
+  let url = instance.bridgeBaseUrl || instance.baseUrl;
   if (result.success) {
     const match = result.output.match(/Dashboard:\s*(https?:\/\/[^\s]+)/);
     if (match) {
@@ -203,10 +203,14 @@ export async function getGatewayDashboardUrl(instance?: AppInstance) {
 
 /** 直接读取配置文件解析 gateway token，绕过 CLI 脱敏 */
 async function readGatewayTokenFromConfig(instance: AppInstance): Promise<string> {
-  // 跨平台读取配置文件：Mac/Linux 用 cat，Windows 用 type
-  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
-  const isWin = ua.includes("Windows") || ua.includes("Win64");
-  const readCmd = isWin ? `type "%USERPROFILE%\\.openclaw\\openclaw.json"` : `cat ~/.openclaw/openclaw.json`;
+  // 按实例类型选择实际运行环境中的读取命令，避免用浏览器 UA 误判宿主平台
+  const readCmd = instance.type === "local"
+    ? (typeof navigator !== "undefined" && navigator.userAgent.includes("Windows")
+        ? `type "%USERPROFILE%\\.openclaw\\openclaw.json"`
+        : `cat ~/.openclaw/openclaw.json`)
+    : instance.type === "wsl"
+      ? `cat ~/.openclaw/openclaw.json`
+      : `cat /root/.openclaw/openclaw.json`;
 
   const result = await readFromInstance(instance, readCmd as any);
   if (!result.success || !result.output.trim()) {
@@ -281,4 +285,3 @@ export async function manageGatewayLaunchAgent(action: "install" | "load" | "unl
 
   return invoke<string>("manage_gateway_launch_agent", { action });
 }
-

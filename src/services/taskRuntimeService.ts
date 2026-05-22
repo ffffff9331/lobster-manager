@@ -5,8 +5,9 @@ export async function executeTaskCommand(item: Pick<CustomCommandItem, "cmd" | "
   if (item.action === "restartGateway") {
     return {
       cmd: item.cmd,
-      output: "快捷指令页不再直接重启 Gateway。请前往 Gateway 页按需执行重载/重启。",
-      success: true,
+      output: "此按钮仅做入口引导，不会直接重启 Gateway。请前往 Gateway 页执行重载/重启。",
+      success: false,
+      error: "此快捷项不执行 Gateway 重启，只负责引导到 Gateway 页。",
     };
   }
 

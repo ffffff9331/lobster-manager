@@ -362,7 +362,7 @@ export async function runDoctorCommand(instance?: AppInstance) {
     if (!result.success) {
       throw new Error(result.error || result.output || "诊断投递失败");
     }
-    return "诊断任务已投递；可用“刷新诊断结果”查看最近输出。";
+    return "诊断任务已发起；可用“刷新诊断结果”查看最近输出。";
   }
 
   if (instance.type === "wsl") {
@@ -370,14 +370,14 @@ export async function runDoctorCommand(instance?: AppInstance) {
     if (!result.success) {
       throw new Error(result.error || result.output || "诊断投递失败");
     }
-    return "WSL2 诊断任务已投递；可用“刷新诊断结果”查看最近输出。";
+    return "WSL2 诊断任务已发起；可用“刷新诊断结果”查看最近输出。";
   }
 
   const result = await dispatchCommand(instance, "openclaw doctor");
   if (!result.success) {
     throw new Error(result.error || result.output || "诊断投递失败");
   }
-  return result.output || "远端诊断命令已投递";
+  return result.output || "远端诊断命令已发起";
 }
 
 export async function readLatestDoctorResult(instance?: AppInstance) {

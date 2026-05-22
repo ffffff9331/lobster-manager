@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import type { AppInstance } from "../types/core";
 import { checkOpenClawInstalled, installOpenClaw, startOpenClawGateway } from "../services/openclawInstallService";
-import { checkNodeJs, type NodeJsStatus } from "../services/nodeJsCheckService";
+import { checkNodeJs, installLocalNodeJs, type NodeJsStatus } from "../services/nodeJsCheckService";
 import { checkDockerEnvironment, installOpenClawWithDocker, type InstallTarget } from "../services/dockerInstallService";
 
 interface UseAutoInstallOptions {
@@ -67,7 +67,7 @@ export function useAutoInstall({ currentInstance, installTarget, dockerWorkDir, 
           return;
         }
 
-        setInstallStatus("✅ OpenClaw Docker 容器已启动");
+        setInstallStatus("✅ OpenClaw Docker 容器启动已发起");
         setInstallOutput(prev => `${prev}\n${result.output}\n\n容器地址: http://localhost:18789`);
         onSuccess?.();
       } catch (error) {
@@ -81,22 +81,42 @@ export function useAutoInstall({ currentInstance, installTarget, dockerWorkDir, 
       return;
     }
 
-    // npm 安装流程（local/wsl）
+    // npm 安装流程（本机 Windows/macOS）
     if (!currentInstance) {
       onError?.("请先选择实例");
       return;
     }
 
-    if (!nodeJsStatus?.installed) {
-      onError?.("请先安装 Node.js 18+");
-      return;
-    }
-
     setInstalling(true);
-    setInstallStatus("检查 OpenClaw 安装状态...");
+    setInstallStatus("检查 Node.js / npm 环境...");
     setInstallOutput("");
 
     try {
+      let resolvedNodeStatus = nodeJsStatus;
+      if (!resolvedNodeStatus?.installed) {
+        setInstallStatus("正在准备 Node.js / npm...");
+        setInstallOutput("未检测到 Node.js 18+，将先在本机安装 Node.js LTS。\n");
+        const nodeInstallResult = await installLocalNodeJs();
+        setInstallOutput(prev => `${prev}${nodeInstallResult.output || ""}`);
+        if (!nodeInstallResult.success) {
+          setInstallStatus("❌ Node.js / npm 准备失败");
+          setInstallOutput(prev => `${prev}${nodeInstallResult.error ? `\n${nodeInstallResult.error}` : ""}`);
+          onError?.(nodeInstallResult.error || "Node.js / npm 准备失败");
+          setInstalling(false);
+          return;
+        }
+
+        resolvedNodeStatus = await checkNodeJs();
+        setNodeJsStatus(resolvedNodeStatus);
+        if (!resolvedNodeStatus.installed) {
+          setInstallStatus("⚠️ Node.js 已安装但当前进程暂未识别");
+          setInstallOutput(prev => `${prev}\n请重启 OpenClaw Manager 后再次点击安装。`);
+          setInstalling(false);
+          return;
+        }
+      }
+
+      setInstallStatus("检查 OpenClaw 安装状态...");
       const { installed, version } = await checkOpenClawInstalled(currentInstance);
       
       if (installed) {
@@ -107,8 +127,8 @@ export function useAutoInstall({ currentInstance, installTarget, dockerWorkDir, 
         const startResult = await startOpenClawGateway(currentInstance);
         
         if (startResult.success) {
-          setInstallStatus("✅ OpenClaw 已就绪");
-          setInstallOutput(prev => `${prev}\n\nGateway 启动成功`);
+          setInstallStatus("✅ OpenClaw 已安装，Gateway 启动已发起");
+          setInstallOutput(prev => `${prev}\n\nGateway 启动已发起`);
           onSuccess?.();
         } else {
           setInstallStatus("⚠️ Gateway 启动失败");
@@ -133,16 +153,16 @@ export function useAutoInstall({ currentInstance, installTarget, dockerWorkDir, 
       }
 
       setInstallOutput(prev => `${prev}\n${installResult.output}`);
-      setInstallStatus("安装成功，启动 Gateway...");
+      setInstallStatus("安装已完成，正在启动 Gateway...");
 
       const startResult = await startOpenClawGateway(currentInstance);
 
       if (startResult.success) {
-        setInstallStatus("✅ OpenClaw 安装并启动成功");
-        setInstallOutput(prev => `${prev}\n\nGateway 启动成功`);
+        setInstallStatus("✅ OpenClaw 安装完成，Gateway 启动已发起");
+        setInstallOutput(prev => `${prev}\n\nGateway 启动已发起`);
         onSuccess?.();
       } else {
-        setInstallStatus("⚠️ 安装成功，但 Gateway 启动失败");
+        setInstallStatus("⚠️ 安装已完成，但 Gateway 启动未确认");
         setInstallOutput(prev => `${prev}\n\n${startResult.error || startResult.output}`);
       }
 

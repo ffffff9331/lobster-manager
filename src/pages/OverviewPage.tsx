@@ -261,14 +261,14 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
           const started = Boolean(feedback.running);
           setGatewayStartPhase(started ? "success" : "attention");
           const nextMessage = started
-            ? `Gateway 已启动成功，首页状态已刷新。${feedback.dispatchMessage ? ` 回执：${feedback.dispatchMessage}` : ""}`
-            : `已发起 Gateway 启动，但当前仍未读到运行中状态。${feedback.controlState?.lastResult ? ` 控制结果：${feedback.controlState.lastResult}` : "建议去网关页看控制状态和日志。"}`;
+            ? `Gateway 已确认启动，首页状态已刷新。${feedback.dispatchMessage ? ` 回执：${feedback.dispatchMessage}` : ""}`
+            : `Gateway 启动已发起，但当前仍未读到运行中状态。${feedback.controlState?.lastResult ? ` 控制结果：${feedback.controlState.lastResult}` : "建议去网关页看控制状态和日志。"}`;
           setActionMessage(nextMessage);
           return;
         }
 
         setGatewayStartPhase("pending");
-        setActionMessage("已触发 Gateway 启动，并刷新首页状态。");
+        setActionMessage("Gateway 启动已发起，并刷新首页状态。");
         return;
       }
       if (deploymentCopy.primaryAction === "refresh") {
@@ -436,7 +436,7 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header">
-          <h2>健康总览</h2>
+          <h2>概览卡片</h2>
         </div>
         <div className="status-grid" style={{ marginBottom: 16 }}>
           <div className="status-card"><div className="status-label">Gateway</div><div className="status-value">{overviewGatewayLoading ? "加载中" : overviewGatewayRunning ? "运行中" : overviewError ? "加载失败" : "未运行 / 未读取"}</div></div>
@@ -450,7 +450,7 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-header">
-          <h2>当前实例主线</h2>
+          <h2>当前管理目标</h2>
         </div>
         {currentInstance ? (
           <div style={{ display: "grid", gap: 10, color: "var(--text-secondary)" }}>
@@ -506,7 +506,7 @@ export function OverviewPage({ instances, currentInstance, gatewayRunning, gatew
 
       <div className="card">
         <div className="card-header">
-          <h2>实例总览</h2>
+          <h2>已接入实例</h2>
         </div>
         <div className="status-grid" style={{ marginBottom: 16 }}>
           <div className="status-card"><div className="status-label">实例总数</div><div className="status-value">{instances.length}</div></div>

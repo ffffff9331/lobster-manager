@@ -196,22 +196,39 @@ body {
 
 .sidebar-nav {
   flex: 1;
-  padding: 12px 8px;
+  padding: 10px 8px;
   overflow-y: auto;
+}
+
+.sidebar-nav-group {
+  margin-bottom: 12px;
+}
+
+.sidebar-nav-group-title {
+  padding: 8px 12px 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .nav-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 10px 12px;
+  border-radius: 10px;
   cursor: pointer;
   color: var(--text-secondary);
   transition: background-color 0.15s ease, color 0.15s ease;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
   position: relative;
   overflow: hidden;
+  text-align: left;
 }
 
 .nav-item::before {
@@ -230,7 +247,6 @@ body {
 .nav-item:hover {
   background: rgba(99, 102, 241, 0.08);
   color: var(--text-primary);
-  transform: translateX(2px);
 }
 
 .nav-item.active {

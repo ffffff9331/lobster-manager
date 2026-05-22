@@ -8,6 +8,7 @@ interface AppInstanceBase {
   name: string;
   status: AppInstanceStatus;
   baseUrl: string;
+  bridgeBaseUrl?: string;
   apiBasePath: string;
   healthPath: string;
   apiKey?: string;

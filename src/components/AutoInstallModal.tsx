@@ -28,18 +28,6 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
         createdAt: new Date().toISOString(),
       };
     }
-    if (installTarget === "wsl") {
-      return {
-        id: "temp-wsl",
-        name: "WSL2",
-        type: "wsl" as const,
-        baseUrl: "http://localhost:18789",
-        status: "unknown" as const,
-        apiBasePath: "/api",
-        healthPath: "/health",
-        createdAt: new Date().toISOString(),
-      };
-    }
     return undefined;
   }, [installTarget, currentInstance]);
 
@@ -58,9 +46,9 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
 
   if (!open) return null;
 
-  const envReady = installTarget === "docker" 
+  const envReady = installTarget === "docker"
     ? (dockerStatus?.docker && dockerStatus?.compose)
-    : nodeJsStatus?.installed;
+    : true;
 
   const downloadUrl = getNodeJsDownloadUrl();
   const nodeInstructions = getNodeJsInstallInstructions();
@@ -90,24 +78,8 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
                 />
                 <div className="option-content">
                   <strong>本地安装</strong>
-                  <span>直接在本机安装 OpenClaw（推荐）</span>
-                  <span className="requirement">需要: Node.js 18+</span>
-                </div>
-              </label>
-
-              <label className={`target-option ${installTarget === "wsl" ? "selected" : ""}`}>
-                <input
-                  type="radio"
-                  name="installTarget"
-                  value="wsl"
-                  checked={installTarget === "wsl"}
-                  onChange={(e) => setInstallTarget(e.target.value as InstallTarget)}
-                  disabled={installing}
-                />
-                <div className="option-content">
-                  <strong>WSL2 安装</strong>
-                  <span>在 Windows WSL2 环境中安装</span>
-                  <span className="requirement">需要: WSL2 + Node.js 18+</span>
+                  <span>直接在本机安装 OpenClaw</span>
+                  <span className="requirement">会自动准备 Node.js 18+ / npm</span>
                 </div>
               </label>
 
@@ -121,13 +93,14 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
                   disabled={installing}
                 />
                 <div className="option-content">
-                  <strong>Docker 安装</strong>
+                  <strong>Docker 部署</strong>
                   <span>使用 Docker 容器运行（隔离环境）</span>
                   <span className="requirement">需要: Docker + Docker Compose</span>
                 </div>
               </label>
             </div>
           </div>
+
 
           {/* Docker 工作目录 */}
           {installTarget === "docker" && (
@@ -161,7 +134,7 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
                 <div className="env-warning">
                   <p>❌ Docker 环境未就绪</p>
                   <div className="install-instructions">
-                    <h4>安装 Docker：</h4>
+                    <h4>准备 Docker：</h4>
                     <pre>{dockerInstructions.join("\n")}</pre>
                   </div>
                 </div>
@@ -173,9 +146,10 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
               </div>
             ) : (
               <div className="env-warning">
-                <p>❌ Node.js 未安装或版本低于 18</p>
+                <p>ℹ️ 未检测到 Node.js 18+ / npm</p>
+                <p>点击“开始安装”后会先在本机准备 Node.js LTS，再安装 OpenClaw。</p>
                 <div className="install-instructions">
-                  <h4>安装 Node.js：</h4>
+                  <h4>如果自动准备失败，可手动安装：</h4>
                   <pre>{nodeInstructions.join("\n")}</pre>
                   <a href={downloadUrl} target="_blank" rel="noopener noreferrer" className="download-link">
                     下载 Node.js
@@ -213,9 +187,10 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
               ) : (
                 <ol>
                   <li>检查 Node.js 和 npm 环境</li>
+                  <li>如果缺失，先在本机安装 Node.js LTS / npm</li>
                   <li>执行 npm install -g openclaw@latest</li>
                   <li>启动 OpenClaw Gateway</li>
-                  <li>验证安装成功</li>
+                  <li>验证安装完成</li>
                 </ol>
               )}
             </div>

@@ -19,7 +19,7 @@ const DEFAULT_PERSISTED_SETTINGS: PersistedSettings = {
 
 const now = () => new Date().toISOString();
 
-const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1"]);
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "::1", "[::1]"]);
 
 function isPrivateIpv4(hostname: string): boolean {
   const parts = hostname.split(".").map((part) => Number(part));
@@ -101,6 +101,7 @@ function normalizeInstanceRecord(input: Partial<AppInstance> | null | undefined)
     name: input.name,
     type: normalizedType,
     baseUrl: input.baseUrl || getDefaultBaseUrl(normalizedType),
+    bridgeBaseUrl: input.bridgeBaseUrl,
     status: input.status || "unknown",
     apiKey: input.apiKey || "",
     isCurrent: Boolean(input.isCurrent),
@@ -199,6 +200,7 @@ export interface CreateInstanceInput {
   name: string;
   type: AppInstance["type"];
   baseUrl: string;
+  bridgeBaseUrl?: string;
   apiBasePath?: string;
   healthPath?: string;
   apiKey?: string;
@@ -214,6 +216,7 @@ export function createManualInstance(input: CreateInstanceInput): AppInstance {
     name: input.name,
     type: input.type,
     baseUrl: input.baseUrl,
+    bridgeBaseUrl: input.bridgeBaseUrl,
     apiKey: input.apiKey || "",
     status: input.status || "unknown",
     isCurrent: false,
@@ -227,6 +230,7 @@ export function createManualInstance(input: CreateInstanceInput): AppInstance {
 }
 
 const DEFAULT_LOCAL_URL = "http://127.0.0.1:18789/";
+const WSL_GATEWAY_PORT = 18789;
 
 // ─── 多实例检测 ───
 
@@ -235,6 +239,7 @@ export interface DetectedInstance {
   exists: boolean;
   running: boolean;
   baseUrl: string;
+  bridgeBaseUrl?: string;
   version?: string;
   detail?: string;
   error?: string;
@@ -284,16 +289,34 @@ async function detectWsl(): Promise<DetectedInstance | null> {
   try {
     const versionResult = await readWslCommand("openclaw --version");
     if (!versionResult.success || !versionResult.output.trim()) return null;
+    const bridgeBaseUrl = await resolveWslBridgeBaseUrl();
     const statusResult = await readWslCommand("openclaw gateway status --json");
     const running = statusResult.success && parseGatewayRunningFromJson(statusResult.output);
     return {
       type: "wsl",
       exists: true,
       running,
-      baseUrl: DEFAULT_LOCAL_URL,
+      baseUrl: bridgeBaseUrl || DEFAULT_LOCAL_URL,
+      bridgeBaseUrl: bridgeBaseUrl || undefined,
       version: versionResult.output.trim(),
       error: running ? undefined : "已检测到 WSL2 OpenClaw，但 Gateway 当前未运行",
     };
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveWslBridgeBaseUrl(): Promise<string | null> {
+  if (!isWindows() || !canUseTauriInvoke()) return null;
+
+  try {
+    const result = await readWslCommand("hostname -I");
+    if (!result.success) return null;
+
+    const bridgeHost = result.output.trim().split(/\s+/)[0]?.trim();
+    if (!bridgeHost) return null;
+
+    return `http://${bridgeHost}:${WSL_GATEWAY_PORT}/`;
   } catch {
     return null;
   }
@@ -349,12 +372,15 @@ async function detectHttpReachable(): Promise<DetectedInstance | null> {
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
-    await fetch(DEFAULT_LOCAL_URL, {
+    const response = await fetch(DEFAULT_LOCAL_URL, {
       method: "GET",
       signal: controller.signal,
-      mode: "no-cors",
     });
     clearTimeout(timeoutId);
+    if (!response.ok) return null;
+    const text = await response.text().catch(() => "");
+    const looksLikeOpenClaw = /openclaw|gateway|healthy|running|ok/i.test(text);
+    if (!looksLikeOpenClaw && text.trim()) return null;
     return {
       type: "local",
       exists: true,

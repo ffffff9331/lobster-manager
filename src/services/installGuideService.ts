@@ -1,6 +1,6 @@
 import type { AppInstance, InstallGuide } from "../types/core";
 import { isLocalInstance } from "../lib/instanceCapabilities";
-import { dispatchDetachedLocalCommand } from "./commandService";
+import { dispatchLocalCommand } from "./commandService";
 import { dispatchToInstance, readFromInstance } from "./instanceCommandService";
 
 const NO_INSTANCE_INSTALL_GUIDE_MESSAGE = "请先选择要操作的实例，安装引导页不再默认回退到本机 local。";
@@ -94,6 +94,20 @@ export function getInstallGuide(instance?: AppInstance): InstallGuide {
     };
   }
 
+  if (instance?.type === "wsl") {
+    return {
+      title: "WSL2 实例接入引导",
+      summary: "WSL2 只作为已有实例接入管理；安装统一走 Windows/macOS 本机安装。",
+      steps: [
+        "如需安装，请切换或新增一个本机实例。",
+        "本机安装会先准备 Node.js 18+ / npm。",
+        "随后执行 npm install -g openclaw 并启动 Gateway。",
+        "WSL2 中已有 OpenClaw 的情况下，仍可作为实例接入和管理。",
+      ],
+      notes: ["Manager 不再提供 WSL2 内安装入口。"],
+    };
+  }
+
   if (instance?.type === "remote") {
     return {
       title: "远端部署引导",
@@ -161,12 +175,12 @@ export async function installOpenClaw(instance?: AppInstance) {
   }
 
   if (instance.type === "wsl") {
-    return dispatchToInstance(instance, "npm install -g openclaw");
+    throw new Error("当前实例是 WSL2；请切换到 Windows 本机实例进行安装。");
   }
 
   if (!isLocalInstance(instance)) {
     throw new Error("当前仅支持本机实例自动安装；Docker / NAS / 远端实例请使用对应部署引导。");
   }
 
-  return dispatchDetachedLocalCommand("npm install -g openclaw");
+  return dispatchLocalCommand("npm install -g openclaw");
 }

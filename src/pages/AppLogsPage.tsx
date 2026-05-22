@@ -73,7 +73,7 @@ export function AppLogsPage({ appLogsState }: AppLogsPageProps) {
       <div className="card">
         <div className="card-header">
           <FileText size={22} />
-          <h2>App日志</h2>
+          <h2>应用日志</h2>
         </div>
         {appLogs ? (
           <pre

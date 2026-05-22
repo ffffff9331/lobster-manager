@@ -1,8 +1,8 @@
-import { isLocalInstance } from "../lib/instanceCapabilities";
 import { isWindows } from "../lib/platform";
 import type { AppInstance, CommandResult } from "../types/core";
-import { dispatchDetachedLocalCommand } from "./commandService";
-import { dispatchToInstance } from "./instanceCommandService";
+import { dispatchLocalCommand } from "./commandService";
+import { dispatchToInstance, readFromInstance } from "./instanceCommandService";
+import { controlGateway } from "./gatewayService";
 
 const NO_INSTANCE_INSTALL_MESSAGE = "请先选择要操作的实例，安装/卸载操作不再默认回退到本机 local。";
 
@@ -41,9 +41,30 @@ async function dispatchHighImpactCommand(instance: AppInstance | undefined, comm
     };
   }
 
-  if (isLocalInstance(instance)) {
-    return dispatchDetachedLocalCommand(command);
+  if (command === getCheckInstalledCommand()) {
+    return readFromInstance(instance, command);
   }
+
+  if (instance.type === "wsl" && command === getInstallCommand()) {
+    return {
+      success: false,
+      output: "",
+      error: "当前实例是 WSL2；请切换到 Windows 本机实例进行安装。",
+    };
+  }
+
+  if (instance.type === "local") {
+    if (command === getStartGatewayCommand()) {
+      try {
+        const output = await controlGateway("start", instance);
+        return { success: true, output, error: undefined };
+      } catch (error) {
+        return { success: false, output: "", error: error instanceof Error ? error.message : String(error) };
+      }
+    }
+    return dispatchLocalCommand(command);
+  }
+
   return dispatchToInstance(instance, command);
 }
 

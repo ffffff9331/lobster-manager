@@ -101,7 +101,7 @@ export function useSystemState({ currentInstance, setSystemLoading }: UseSystemS
       const resultMessage = await runDoctorCommand(currentInstance);
       await loadSystemInfo();
       const latest = await readLatestDoctorResult(currentInstance);
-      setDoctorResult(latest || resultMessage || "诊断命令已投递，请稍后刷新结果");
+      setDoctorResult(latest || resultMessage || "诊断已执行完成，请查看最新结果");
     } finally {
       setSystemLoading(null);
     }

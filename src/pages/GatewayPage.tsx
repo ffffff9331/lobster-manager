@@ -43,7 +43,7 @@ export function GatewayPage({ gatewayState }: GatewayPageProps) {
         <div className="card">
           <div className="card-header">
             <Activity size={22} />
-            <h2>Gateway 状态</h2>
+            <h2>实例运行态</h2>
           </div>
 
           <div
@@ -62,7 +62,7 @@ export function GatewayPage({ gatewayState }: GatewayPageProps) {
               {currentInstance ? ` ｜ ${currentInstance.type} ｜ ${currentInstance.baseUrl}` : " ｜ 请先选择要操作的实例"}
             </span>
             <div style={{ marginTop: 6, color: "var(--text-secondary)" }}>
-              说明：侧栏里的“在线/离线”表示实例连通性；这里的“运行中/已停止”表示 Gateway 服务运行态，两者不是同一个概念。
+              这里管理当前实例的 Gateway 服务。侧栏“在线/离线”表示实例连通性；本页“运行中/已停止”表示服务运行态。
             </div>
           </div>
 
@@ -132,7 +132,7 @@ export function GatewayPage({ gatewayState }: GatewayPageProps) {
           <div className="card-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Terminal size={22} />
-              <h2>当前实时日志</h2>
+              <h2>运行日志</h2>
             </div>
             <button className="btn btn-secondary" onClick={onRefreshLogs}>
               <RefreshCw size={16} /> 刷新日志

@@ -3,14 +3,34 @@ import { canUseTauriInvoke, isWebPreview } from "../lib/platform";
 import { parseGatewayRunningFromJson } from "../lib/cliOutputParser";
 import { readFromInstance } from "./instanceCommandService";
 
+function isHealthyHttpPayload(payload: unknown): boolean {
+  if (!payload || typeof payload !== "object") return false;
+  const value = payload as Record<string, unknown>;
+  if (value.running === true) return true;
+  if (value.status === "ok" || value.status === "healthy" || value.status === "running") return true;
+  const service = value.service as { runtime?: { status?: string; state?: string } } | undefined;
+  return service?.runtime?.status === "running" || service?.runtime?.state === "active";
+}
+
 async function probeViaHttpHealth(instance: AppInstance): Promise<AppInstanceStatus> {
   const healthUrl = isWebPreview() && (instance.type === "local" || instance.type === "wsl")
     ? "/__openclaw_health"
-    : new URL(instance.healthPath || "/health", instance.baseUrl).toString();
+    : new URL(instance.healthPath || "/health", instance.bridgeBaseUrl || instance.baseUrl).toString();
 
   try {
     const response = await fetch(healthUrl, { method: "GET" });
-    return response.ok ? "online" : "offline";
+    if (!response.ok) return "offline";
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      return isHealthyHttpPayload(await response.json()) ? "online" : "unknown";
+    }
+    const text = await response.text();
+    if (!text.trim()) return "unknown";
+    try {
+      return isHealthyHttpPayload(JSON.parse(text)) ? "online" : "unknown";
+    } catch {
+      return /ok|healthy|running/i.test(text) ? "online" : "unknown";
+    }
   } catch {
     return isWebPreview() && (instance.type === "local" || instance.type === "wsl") ? "unknown" : "offline";
   }

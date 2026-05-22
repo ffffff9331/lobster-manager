@@ -129,7 +129,7 @@ fn run_shell_command(command: &str) -> std::io::Result<std::process::Output> {
 fn run_shell_command(command: &str) -> std::io::Result<std::process::Output> {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    
+
     Command::new("cmd")
         .args(["/C", command])
         .current_dir(get_default_dir())
@@ -192,7 +192,7 @@ fn build_wsl_shell_command(command: &str) -> String {
 fn run_wsl_command(command: &str) -> std::io::Result<std::process::Output> {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    
+
     let wrapped = build_wsl_shell_command(command);
     Command::new("wsl.exe")
         .args(["-e", "bash", "-lic", &wrapped])
@@ -288,6 +288,7 @@ fn is_read_only_command(command: &str) -> bool {
         || normalized.starts_with("openclaw cron status")
         || normalized.starts_with("openclaw cron list")
         || normalized.starts_with("openclaw cron runs")
+        || normalized.starts_with("openclaw skills list")
         || normalized.starts_with("openclaw --version")
         || normalized.starts_with("node --version")
         || normalized.starts_with("curl ")
@@ -360,10 +361,25 @@ fn decode_windows_console_bytes(bytes: &[u8]) -> String {
             }
             let pair = ((b as u16) << 8) | bytes[i + 1] as u16;
             let ch = match pair {
-                0xB2BB => '不', 0xCAC7 => '是', 0xC4DA => '内', 0xB2BF => '部', 0xBBD2 => '或',
-                0xCDE2 => '外', 0xC3FC => '命', 0xC1EE => '令', 0xD2B2 => '也', 0xBFD8 => '可',
-                0xD4CB => '运', 0xD0D0 => '行', 0xB3CC => '程', 0xD0F2 => '序', 0xC5FA => '批',
-                0xB4A6 => '处', 0xC0ED => '理', 0xCEC4 => '文', 0xBCFE => '件',
+                0xB2BB => '不',
+                0xCAC7 => '是',
+                0xC4DA => '内',
+                0xB2BF => '部',
+                0xBBD2 => '或',
+                0xCDE2 => '外',
+                0xC3FC => '命',
+                0xC1EE => '令',
+                0xD2B2 => '也',
+                0xBFD8 => '可',
+                0xD4CB => '运',
+                0xD0D0 => '行',
+                0xB3CC => '程',
+                0xD0F2 => '序',
+                0xC5FA => '批',
+                0xB4A6 => '处',
+                0xC0ED => '理',
+                0xCEC4 => '文',
+                0xBCFE => '件',
                 _ => REPLACEMENT,
             };
             if ch == REPLACEMENT {
@@ -405,7 +421,8 @@ fn decode_stderr(bytes: &[u8]) -> String {
 #[cfg(target_os = "windows")]
 fn should_retry_via_wsl(command: &str, stderr: &str) -> bool {
     let normalized = command.trim();
-    let openclaw_read = normalized.starts_with("openclaw ") && !is_gateway_lifecycle_command(normalized);
+    let openclaw_read =
+        normalized.starts_with("openclaw ") && !is_gateway_lifecycle_command(normalized);
     openclaw_read && stderr.contains("openclaw") && stderr.contains("不是内部或外部命令")
 }
 
@@ -413,7 +430,7 @@ fn should_retry_via_wsl(command: &str, stderr: &str) -> bool {
 fn try_run_with_wsl_fallback(command: &str) -> (std::process::Output, bool) {
     use std::os::windows::process::CommandExt;
     const CREATE_NO_WINDOW: u32 = 0x08000000;
-    
+
     match run_shell_command(command) {
         Ok(out) => {
             let stderr = decode_stderr(&out.stderr);

@@ -34,11 +34,11 @@ async function requestLocalDispatch(command: InstanceDispatchCommand): Promise<C
   return dispatchLocalCommand(command);
 }
 
-async function requestRemoteCommand(instance: AppInstance, command: string): Promise<CommandResult> {
+async function requestRemoteCommand(instance: AppInstance, command: string, accessMode: "read" | "dispatch"): Promise<CommandResult> {
   const result = await requestWithInstance(instance, {
     path: instance.apiBasePath,
     command,
-    accessMode: "dispatch",
+    accessMode,
   });
   if (typeof result === "object" && result && "success" in result) {
     return result as CommandResult;
@@ -88,7 +88,7 @@ export async function readFromInstance(instance: AppInstance | undefined, comman
     } else if (instance.type === "docker") {
       result = await readDockerCommand(getDockerContainerName(instance), command);
     } else {
-      result = await requestRemoteCommand(instance, command);
+      result = await requestRemoteCommand(instance, command, "read");
     }
     // 自动配对重试（最多一次）
     if (!result.success && !_retried) {
@@ -118,7 +118,7 @@ export async function dispatchToInstance(instance: AppInstance | undefined, comm
     } else if (instance.type === "docker") {
       result = await dispatchDockerCommand(getDockerContainerName(instance), command);
     } else {
-      result = await requestRemoteCommand(instance, command);
+      result = await requestRemoteCommand(instance, command, "dispatch");
     }
     // 自动配对重试（最多一次）
     if (!result.success && !_retried) {

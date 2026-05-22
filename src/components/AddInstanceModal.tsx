@@ -9,6 +9,7 @@ interface AddInstanceModalProps {
     exists: boolean;
     running: boolean;
     baseUrl: string;
+    bridgeBaseUrl?: string;
     type?: AppInstance["type"];
     error?: string;
     detail?: string;
@@ -137,6 +138,7 @@ export function AddInstanceModal({
                 <div>检测地址：{localInstanceStatus.baseUrl}</div>
                 <div>检测结果：{localInstanceStatus.exists && localInstanceStatus.running ? (localInstanceStatus.type === "wsl" ? "已发现可用 WSL2 OpenClaw" : "已发现可用本机实例") : "未发现可直接接入的本机 / WSL2 实例"}</div>
                 {localInstanceStatus.type ? <div>实例类型：{localInstanceStatus.type === "wsl" ? "WSL2" : localInstanceStatus.type}</div> : null}
+                {localInstanceStatus.type === "wsl" && localInstanceStatus.bridgeBaseUrl ? <div>WSL2 桥接地址：{localInstanceStatus.bridgeBaseUrl}</div> : null}
                 {localInstanceStatus.detail ? <div>检测详情：{localInstanceStatus.detail}</div> : null}
                 {localInstanceStatus.error ? <div>错误信息：{localInstanceStatus.error}</div> : null}
                 {localInstanceStatus.exists && localInstanceStatus.running ? (

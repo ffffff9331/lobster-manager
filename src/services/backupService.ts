@@ -1,5 +1,4 @@
 import type { AppInstance, BackupArtifact, BackupCreateOptions, CommandResult } from "../types/core";
-import { dispatchDetachedLocalCommand } from "./commandService";
 import { dispatchToInstance, readFromInstance, runRequiredInstanceCommand } from "./instanceCommandService";
 
 const NO_INSTANCE_BACKUP_MESSAGE = "请先选择要操作的实例，备份页不再默认回退到本机 local。";
@@ -53,26 +52,14 @@ export async function createBackup(options: BackupCreateOptions = {}, instance?:
     throw new Error(NO_INSTANCE_BACKUP_MESSAGE);
   }
 
-  if (instance.type === "local") {
-    const result = await dispatchDetachedLocalCommand(command);
-    if (!result.success) {
-      throw new Error(result.error || result.output || "创建备份失败");
-    }
-    return {
-      command,
-      output: result.output || "命令已投递",
-      archivePath: options.output?.trim() || undefined,
-    };
-  }
-
-  if (instance.type === "wsl") {
+  if (instance.type === "local" || instance.type === "wsl") {
     const result = await dispatchToInstance(instance, command);
     if (!result.success) {
       throw new Error(result.error || result.output || "创建备份失败");
     }
     return {
       command,
-      output: result.output || "命令已投递到 WSL2",
+      output: result.output || "",
       archivePath: extractArchivePath(result.output) || options.output?.trim() || undefined,
     };
   }
@@ -90,12 +77,18 @@ export async function verifyBackup(archivePath: string, instance?: AppInstance):
   if (!safePath) {
     throw new Error("备份文件路径不能为空");
   }
+  if (!instance) {
+    throw new Error(NO_INSTANCE_BACKUP_MESSAGE);
+  }
 
   const command = `openclaw backup verify ${quoteShellArg(safePath)} --json`;
-  const output = await runRequiredInstanceCommand(instance, command, "校验备份失败");
+  const result = await readFromInstance(instance, command);
+  if (!result.success) {
+    throw new Error(result.error || result.output || "校验备份失败");
+  }
   return {
     command,
-    output,
+    output: result.output || "",
     archivePath: safePath,
   };
 }
@@ -112,26 +105,14 @@ export async function restoreBackup(archivePath: string, instance?: AppInstance)
     throw new Error(NO_INSTANCE_BACKUP_MESSAGE);
   }
 
-  if (instance.type === "local") {
-    const result = await dispatchDetachedLocalCommand(command);
-    if (!result.success) {
-      throw new Error(result.error || result.output || "还原备份失败");
-    }
-    return {
-      command,
-      output: result.output || "还原命令已投递",
-      archivePath: safePath,
-    };
-  }
-
-  if (instance.type === "wsl") {
+  if (instance.type === "local" || instance.type === "wsl") {
     const result = await dispatchToInstance(instance, command);
     if (!result.success) {
       throw new Error(result.error || result.output || "还原备份失败");
     }
     return {
       command,
-      output: result.output || "还原命令已投递到 WSL2",
+      output: result.output || "",
       archivePath: safePath,
     };
   }

@@ -191,17 +191,20 @@ export function DoctorPage({ doctorState }: DoctorPageProps) {
       <div className="card" style={{ marginBottom: 12 }}>
         <div className="card-header" style={{ marginBottom: 10 }}>
           <Wrench size={20} />
-          <h2>测试诊断</h2>
+          <h2>安装与修复</h2>
+        </div>
+        <div style={{ color: "var(--text-secondary)", marginBottom: 12 }}>
+          先检查环境，再按需修复。这里保留真实命令输出，不做假成功提示。
         </div>
         <div style={{ ...cardStyle, padding: "10px 12px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 8 }}>
-            <div style={{ fontWeight: 600 }}>系统概览</div>
+            <div style={{ fontWeight: 600 }}>环境概览</div>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               <button className="btn btn-secondary btn-small" onClick={() => refreshDoctorResult?.()} disabled={!refreshDoctorResult || checkingUpdate}>
                 <RefreshCw size={14} className={checkingUpdate ? "animate-spin" : ""} /> 刷新结果
               </button>
               <button className="btn btn-primary btn-small" onClick={() => runDoctor?.()} disabled={!runDoctor}>
-                <Play size={14} /> 开始诊断
+                <Play size={14} /> 一键检查
               </button>
             </div>
           </div>
@@ -233,7 +236,7 @@ export function DoctorPage({ doctorState }: DoctorPageProps) {
       <div className="card" style={{ marginBottom: 12 }}>
         <div className="card-header" style={{ marginBottom: 10 }}>
           <Wrench size={18} />
-          <h2 style={{ fontSize: 16 }}>诊断与排障指令</h2>
+          <h2 style={{ fontSize: 16 }}>修复动作</h2>
         </div>
 
         <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 10 }}>
@@ -242,14 +245,26 @@ export function DoctorPage({ doctorState }: DoctorPageProps) {
           </button>
         </div>
 
-        <div className="doctor-command-grid">
-          {doctorQuickCommands.map((item) => (
-            <CommandTile key={item.cmd} item={item} commandRunning={commandRunning} onRun={(command) => void runCommand?.(command.cmd, command)} />
-          ))}
-          {customCommands.map((item) => (
-            <CommandTile key={item.cmd} item={{ ...item, builtIn: false }} commandRunning={commandRunning} onRun={(command) => void runCommand?.(command.cmd, command)} onDelete={deleteCommand} />
-          ))}
-        </div>
+        {doctorCommandGroups.map((group) => (
+          <div key={group} style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 700, marginBottom: 8 }}>{group}</div>
+            <div className="doctor-command-grid">
+              {doctorQuickCommands.filter((item) => item.group === group).map((item) => (
+                <CommandTile key={item.cmd} item={item} commandRunning={commandRunning} onRun={(command) => void runCommand?.(command.cmd, command)} />
+              ))}
+            </div>
+          </div>
+        ))}
+        {customCommands.length ? (
+          <div style={{ marginTop: 4 }}>
+            <div style={{ fontSize: 12, color: "var(--text-muted)", fontWeight: 700, marginBottom: 8 }}>自定义</div>
+            <div className="doctor-command-grid">
+              {customCommands.map((item) => (
+                <CommandTile key={item.cmd} item={{ ...item, builtIn: false }} commandRunning={commandRunning} onRun={(command) => void runCommand?.(command.cmd, command)} onDelete={deleteCommand} />
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         {!customCommands.length ? (
           <div style={{ color: "var(--text-secondary)", fontSize: 13, marginTop: 10 }}>还没有自定义指令。</div>
@@ -282,7 +297,7 @@ export function DoctorPage({ doctorState }: DoctorPageProps) {
               ? `诊断结果\n\n${doctorResult}`
               : cmdResult
                 ? `${cmdResult.success ? "✅" : "❌"} ${cmdResult.cmd}\n\n${cmdResult.output}${cmdResult.error && cmdResult.error !== cmdResult.output ? `\n\nError: ${cmdResult.error}` : ""}`
-                : "还没有输出。点上方“开始诊断”或任一指令后，这里会显示真实返回内容。"}
+                : "还没有输出。点上方“一键检查”或任一指令后，这里会显示真实返回内容。"}
           </pre>
         </div>
       </div>

@@ -47,7 +47,7 @@ export function useSystemActions({
   const [backupOptions, setBackupOptions] = useState<BackupCreateOptions>(INITIAL_BACKUP_OPTIONS);
 
   const installGuide = useMemo<InstallGuide>(() => getInstallGuide(currentInstance), [currentInstance]);
-  const canInstallOpenClaw = currentInstance?.type === "local" || currentInstance?.type === "wsl";
+  const canInstallOpenClaw = currentInstance?.type === "local";
 
   const applySettingsToggle = useCallback(
     async (
@@ -177,11 +177,11 @@ export function useSystemActions({
     setSystemLoading("backup-create");
     try {
       const artifact = await createBackup(backupOptions, currentInstance);
-      setBackupStatus(artifact.archivePath ? `备份命令已发起：${artifact.archivePath}` : "备份命令已发起");
+      setBackupStatus(artifact.archivePath ? `备份已执行完成：${artifact.archivePath}` : "备份已执行完成");
       setBackupArchivePath(artifact.archivePath || "");
       setBackupVerifyPath(artifact.archivePath || backupVerifyPath);
       setBackupRestorePath(artifact.archivePath || backupRestorePath);
-      setBackupCommandOutput(artifact.output || "已向当前实例投递备份命令，请随后校验结果");
+      setBackupCommandOutput(artifact.output || "备份命令已执行完成");
     } catch (e) {
       const message = formatActionError("创建备份失败", e);
       setBackupStatus(message);
@@ -201,7 +201,7 @@ export function useSystemActions({
     setSystemLoading("backup-verify");
     try {
       const artifact = await verifyBackup(path, currentInstance);
-      setBackupStatus(`备份校验命令已完成：${path}`);
+      setBackupStatus(`备份校验已完成：${path}`);
       setBackupCommandOutput(artifact.output || "");
       setBackupVerifyPath(path);
     } catch (e) {
@@ -223,7 +223,7 @@ export function useSystemActions({
     setSystemLoading("backup-restore");
     try {
       const artifact = await restoreBackup(path, currentInstance);
-      setBackupStatus(`备份还原命令已发起：${path}`);
+      setBackupStatus(`备份还原已执行完成：${path}`);
       setBackupCommandOutput(artifact.output || "");
       setBackupRestorePath(path);
     } catch (e) {
