@@ -7,9 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: '要构建的 tag（例如 v2.0.0-beta）'
+        description: '要构建的 tag（例如 v2.0.7）'
         required: true
         type: string
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: true
 
 env:
   TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -17,6 +21,7 @@ env:
 
 jobs:
   build-macos:
+    name: macOS dmg
     permissions:
       contents: write
     runs-on: macos-latest
@@ -32,21 +37,22 @@ jobs:
         with:
           targets: aarch64-apple-darwin
       - run: npm ci
-      - name: Build Tauri macOS bundles
+      - name: Build macOS dmg
         run: npm run tauri build -- --target aarch64-apple-darwin --bundles dmg
-      - name: Upload macOS assets to release
+      - name: Upload macOS dmg
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: |
-            src-tauri/target/aarch64-apple-darwin/release/bundle/**/*.dmg
+          name: OpenClaw Manager ${{ github.event.inputs.tag || github.ref_name }}
+          files: src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+          fail_on_unmatched_files: true
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
-          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-windows:
+    name: Windows nsis exe
     permissions:
       contents: write
     runs-on: windows-latest
@@ -62,22 +68,22 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
       - run: npm ci
-      - name: Build Tauri Windows bundles
+      - name: Build Windows installer
         run: npm run tauri build -- --target x86_64-pc-windows-msvc --bundles nsis
-      - name: Upload Windows assets to release
+      - name: Upload Windows exe
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: |
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.exe
-            src-tauri/target/x86_64-pc-windows-msvc/release/bundle/**/*.exe.sig
+          name: OpenClaw Manager ${{ github.event.inputs.tag || github.ref_name }}
+          files: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+          fail_on_unmatched_files: true
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
-          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-linux:
+    name: Linux AppImage
     permissions:
       contents: write
     runs-on: ubuntu-22.04
@@ -97,16 +103,16 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
       - run: npm ci
-      - name: Build Tauri Linux bundles
+      - name: Build Linux AppImage
         run: npm run tauri build -- --target x86_64-unknown-linux-gnu --bundles appimage
-      - name: Upload Linux assets to release
+      - name: Upload Linux AppImage
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          files: |
-            src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/**/*.AppImage
+          name: OpenClaw Manager ${{ github.event.inputs.tag || github.ref_name }}
+          files: src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+          fail_on_unmatched_files: true
           draft: false
           prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
-          append_body: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
