@@ -190,7 +190,7 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
                 <ol>
                   <li>检查 Node.js 和 npm 环境</li>
                   <li>如果缺失，先在本机安装 Node.js LTS / npm</li>
-                  <li>执行 npm install -g openclaw@latest</li>
+                  <li>执行 npm install -g openclaw@latest（使用国内镜像）</li>
                   <li>启动 OpenClaw Gateway</li>
                   <li>验证安装完成</li>
                 </ol>

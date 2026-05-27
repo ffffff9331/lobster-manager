@@ -141,7 +141,7 @@ export function useAutoInstall({ currentInstance, installTarget, dockerWorkDir, 
       }
 
       setInstallStatus("正在安装 OpenClaw...");
-      setInstallOutput("执行: npm install -g openclaw@latest\n");
+      setInstallOutput("执行: npm install -g openclaw@latest（使用国内镜像）\n");
 
       const installResult = await installOpenClaw(currentInstance);
 

@@ -49,7 +49,7 @@ export function getInstallGuide(instance?: AppInstance): InstallGuide {
         "接入后用 manager 做连接、模型、备份和状态管理。",
       ],
       notes: [
-        "Docker 更适合模板化部署与卷映射，不适合直接走 npm 全局安装。",
+        "Docker 更适合模板化部署与卷映射，不适合直接走 npm 全局安装。国内网络可能无法直接拉取 ghcr.io 镜像，可先配置 Docker 镜像加速。",
       ],
       templates: [
         {
@@ -101,7 +101,7 @@ export function getInstallGuide(instance?: AppInstance): InstallGuide {
       steps: [
         "如需安装，请切换或新增一个本机实例。",
         "本机安装会先准备 Node.js 18+ / npm。",
-        "随后执行 npm install -g openclaw 并启动 Gateway。",
+        "随后执行 npm install -g openclaw --registry https://registry.npmmirror.com 并启动 Gateway。",
         "WSL2 中已有 OpenClaw 的情况下，仍可作为实例接入和管理。",
       ],
       notes: ["Manager 不再提供 WSL2 内安装入口。"],
@@ -147,7 +147,7 @@ export function getInstallGuide(instance?: AppInstance): InstallGuide {
     summary: "本机可直接尝试检查与安装；失败时再退回官方安装流程。",
     steps: [
       "先运行 openclaw --version 确认是否已安装。",
-      "若未安装，使用 npm install -g openclaw 完成 CLI 安装。",
+      "若未安装，使用 npm install -g openclaw --registry https://registry.npmmirror.com 完成 CLI 安装。",
       "安装后运行 openclaw setup 或 openclaw gateway status，确认运行基础。",
       "如需控制台 UI，继续运行 openclaw dashboard 或在管理器中刷新本机实例状态。",
     ],
@@ -182,5 +182,5 @@ export async function installOpenClaw(instance?: AppInstance) {
     throw new Error("当前仅支持本机实例自动安装；Docker / NAS / 远端实例请使用对应部署引导。");
   }
 
-  return dispatchLocalCommand("npm install -g openclaw");
+  return dispatchLocalCommand("npm install -g openclaw --registry https://registry.npmmirror.com");
 }
