@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { logger } from "./lib/logger";
 import { Activity, Play } from "lucide-react";
 import { AddInstanceModal } from "./components/AddInstanceModal";
 import { AppContent } from "./components/AppContent";
@@ -77,7 +78,7 @@ function App() {
 
     const fire = (label: string, task: () => Promise<void>) => {
       void task().catch((error) => {
-        console.warn(`[startup] ${label} failed`, error);
+        logger.warn(`[startup] ${label} failed`, error);
       });
     };
 

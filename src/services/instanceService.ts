@@ -1,4 +1,5 @@
 import { readLocalCommand, readWslCommand } from "./commandService";
+import { GATEWAY_DEFAULT_PORT, GATEWAY_DEFAULT_URL, HEALTH_CHECK_TIMEOUT_MS } from "../config/constants";
 import { canUseTauriInvoke, isWindows } from "../lib/platform";
 import { parseGatewayRunningFromJson } from "../lib/cliOutputParser";
 import type { AppInstance, AppInstanceSource, AppInstanceStatus } from "../types/core";
@@ -82,7 +83,7 @@ export function validateInstanceBaseUrl(
 
 function getDefaultBaseUrl(type: AppInstance["type"]) {
   if (type === "local" || type === "wsl") {
-    return "http://127.0.0.1:18789/";
+    return GATEWAY_DEFAULT_URL;
   }
   return "";
 }
@@ -229,8 +230,8 @@ export function createManualInstance(input: CreateInstanceInput): AppInstance {
   };
 }
 
-const DEFAULT_LOCAL_URL = "http://127.0.0.1:18789/";
-const WSL_GATEWAY_PORT = 18789;
+const DEFAULT_LOCAL_URL = GATEWAY_DEFAULT_URL;
+const WSL_GATEWAY_PORT = GATEWAY_DEFAULT_PORT;
 
 // ─── 多实例检测 ───
 
@@ -342,7 +343,7 @@ async function detectDocker(): Promise<DetectedInstance | null> {
     const running = statusResult.success && parseGatewayRunningFromJson(statusResult.output);
 
     // 尝试获取容器映射端口
-    const portResult = await readLocalCommand(`docker port ${containerName} 18789`);
+    const portResult = await readLocalCommand(`docker port ${containerName} ${GATEWAY_DEFAULT_PORT}`);
     let baseUrl = DEFAULT_LOCAL_URL;
     if (portResult.success && portResult.output.trim()) {
       const portMatch = portResult.output.match(/(\d+\.\d+\.\d+\.\d+):(\d+)/);
@@ -371,7 +372,7 @@ async function detectDocker(): Promise<DetectedInstance | null> {
 async function detectHttpReachable(): Promise<DetectedInstance | null> {
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
+    const timeoutId = setTimeout(() => controller.abort(), HEALTH_CHECK_TIMEOUT_MS);
     const response = await fetch(DEFAULT_LOCAL_URL, {
       method: "GET",
       signal: controller.signal,

@@ -35,7 +35,7 @@ candidates = []
 for ip in sorted(ips):
     if ip.startswith('127.'):
         continue
-    base = f'http://{ip}:18789/'
+    base = f'http://{ip}:{GATEWAY_DEFAULT_PORT}/'
     for path in ('health', ''):
         try:
             req = urllib.request.Request(base + path)

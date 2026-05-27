@@ -1,8 +1,9 @@
-import { dispatchDetachedLocalCommand, readLocalCommand } from "./commandService";
+import { dispatchLocalCommand, readLocalCommand } from "./commandService";
 import { isWindows } from "../lib/platform";
+import { GATEWAY_DEFAULT_PORT } from "../config/constants";
 
 export type InstallTarget = "local" | "docker";
-const DOCKER_GATEWAY_PORT = 18789;
+const DOCKER_GATEWAY_PORT = GATEWAY_DEFAULT_PORT;
 
 export interface DockerInstallResult {
   success: boolean;
@@ -38,9 +39,7 @@ export async function checkDockerEnvironment(): Promise<{ docker: boolean; compo
 
 export async function installOpenClawWithDocker(workDir: string): Promise<DockerInstallResult> {
   // 1. 创建 docker-compose.yml
-  const composeContent = `version: '3.8'
-
-services:
+  const composeContent = `services:
   openclaw:
     image: openclaw/openclaw:latest
     container_name: openclaw
@@ -62,7 +61,7 @@ services:
       ? `mkdir "${workDir}\\openclaw-data" "${workDir}\\openclaw-workspace" 2>nul`
       : `mkdir -p "${workDir}/openclaw-data" "${workDir}/openclaw-workspace"`;
     
-    const mkdirResult = await dispatchDetachedLocalCommand(mkdirCmd);
+    const mkdirResult = await dispatchLocalCommand(mkdirCmd);
     if (!mkdirResult.success) {
       return { success: false, output: mkdirResult.output, error: mkdirResult.error || "创建 Docker 工作目录失败" };
     }
@@ -76,14 +75,14 @@ services:
       ? `echo ${composeContent.replace(/\n/g, "^")} > "${composeFile}"`
       : `cat > "${composeFile}" << 'EOF'\n${composeContent}\nEOF`;
     
-    const writeResult = await dispatchDetachedLocalCommand(writeCmd);
+    const writeResult = await dispatchLocalCommand(writeCmd);
     if (!writeResult.success) {
       return { success: false, output: writeResult.output, error: writeResult.error || "写入 docker-compose.yml 失败" };
     }
 
     // 4. 启动容器
     const startCmd = `cd "${workDir}" && docker compose up -d`;
-    const result = await dispatchDetachedLocalCommand(startCmd);
+    const result = await dispatchLocalCommand(startCmd);
 
     if (!result.success) {
       return {

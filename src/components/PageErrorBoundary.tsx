@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { logger } from "../lib/logger";
 
 interface PageErrorBoundaryProps {
   pageName: string;
@@ -24,7 +25,7 @@ export class PageErrorBoundary extends Component<PageErrorBoundaryProps, PageErr
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error(`[${this.props.pageName}] render failed:`, error, errorInfo);
+    logger.error(`[${this.props.pageName}] render failed:`, error, errorInfo);
   }
 
   render() {

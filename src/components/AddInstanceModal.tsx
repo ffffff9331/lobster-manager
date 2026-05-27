@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { GATEWAY_DEFAULT_URL } from "../config/constants";
 import type { AppInstance } from "../types/core";
 import { validateInstanceBaseUrl } from "../services/instanceService";
 
@@ -40,7 +41,7 @@ interface NewInstanceFormState {
 const defaultFormState: NewInstanceFormState = {
   name: "",
   type: "remote",
-  baseUrl: "http://127.0.0.1:18789/",
+  baseUrl: GATEWAY_DEFAULT_URL,
   apiBasePath: "/",
   healthPath: "/health",
   notes: "",
@@ -95,7 +96,7 @@ export function AddInstanceModal({
     onSubmit({
       name: trimmedName,
       type: form.type,
-      baseUrl: form.type === "local" ? "http://127.0.0.1:18789/" : form.baseUrl.trim(),
+      baseUrl: form.type === "local" ? GATEWAY_DEFAULT_URL : form.baseUrl.trim(),
       apiBasePath: form.apiBasePath.trim() || "/",
       healthPath: form.healthPath.trim() || "/health",
       notes: form.notes.trim(),
@@ -165,14 +166,14 @@ export function AddInstanceModal({
               onChange={(e) => {
                 const nextType = e.target.value as AppInstance["type"];
                 const suggestedBaseUrl = nextType === "local"
-                  ? "http://127.0.0.1:18789/"
+                  ? GATEWAY_DEFAULT_URL
                   : nextType === "wsl"
-                    ? "http://127.0.0.1:18789/"
+                    ? GATEWAY_DEFAULT_URL
                     : nextType === "docker"
                     ? "http://localhost:18789"
                     : nextType === "nas"
                       ? "http://192.168.1.x:18789"
-                      : "http://127.0.0.1:18789/";
+                      : GATEWAY_DEFAULT_URL;
                 setForm((prev) => ({ ...prev, type: nextType, baseUrl: suggestedBaseUrl }));
               }}
             >
@@ -188,7 +189,7 @@ export function AddInstanceModal({
             <input
               value={form.baseUrl}
               onChange={(e) => setForm((prev) => ({ ...prev, baseUrl: e.target.value }))}
-              placeholder={form.type === "docker" ? "http://localhost:18789" : form.type === "nas" ? "http://192.168.1.x:18789" : form.type === "wsl" ? "http://127.0.0.1:18789/ 或 http://<windows-host>:18789/" : "http://127.0.0.1:18789/"}
+              placeholder={form.type === "docker" ? "http://localhost:18789" : form.type === "nas" ? "http://192.168.1.x:18789" : form.type === "wsl" ? "http://127.0.0.1:18789/ 或 http://<windows-host>:18789/" : GATEWAY_DEFAULT_URL}
               disabled={form.type === "local"}
             />
             <small>

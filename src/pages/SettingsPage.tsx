@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { logger } from "../lib/logger";
 import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { DatabaseBackup, FolderOpen, Moon, Radar, Settings, Shield, Sun } from "lucide-react";
 import { UninstallConfirmModal } from "../components/UninstallConfirmModal";
@@ -6,7 +7,52 @@ import { getInstanceCapabilitySummary, getInstanceTypeLabel, supportsDirectUnins
 import type { BackupCreateOptions, GatewayControlState, SettingsState } from "../types/core";
 import type { LanDiscoveryCandidate } from "../services/lanDiscoveryService";
 
-interface SettingsPageState {
+interface UpdateState {
+  updateStatus: string;
+  appVersion: string;
+  hasManagerUpdate: boolean | null;
+  checkingUpdate: boolean;
+  configPath: string;
+  dataPath: string;
+  checkForUpdates: () => Promise<void>;
+  openDownloadUrl: () => Promise<void>;
+}
+
+interface BackupState {
+  backupStatus: string;
+  backupCommandOutput: string;
+  backupArchivePath: string;
+  backupOptions: BackupCreateOptions;
+  setBackupOptions: (value: BackupCreateOptions | ((prev: BackupCreateOptions) => BackupCreateOptions)) => void;
+  previewBackupPlan: () => Promise<void>;
+  createBackupNow: () => Promise<void>;
+  verifyBackupNow: (archivePath?: string) => Promise<void>;
+  restoreBackupNow: (archivePath?: string) => Promise<void>;
+}
+
+interface InstallState {
+  showUninstallConfirm: boolean;
+  setShowUninstallConfirm: (value: boolean) => void;
+  uninstallOpenClaw: () => void;
+  openConfigDir: () => void;
+}
+
+interface SecurityState {
+  onToggleWhitelist: () => void;
+  onToggleFileAccess: () => void;
+  onToggleLanAccess: () => void;
+  onToggleMdns: () => void;
+}
+
+interface DiscoveryState {
+  onRunLanDiscovery: () => void;
+  onSaveLanDiscoveryResult: (candidate: LanDiscoveryCandidate) => void;
+  lanDiscoveryRunning: boolean;
+  lanDiscoveryStatus: string;
+  lanDiscoveryResults: LanDiscoveryCandidate[];
+}
+
+interface SettingsPageState extends UpdateState, BackupState, InstallState, SecurityState, DiscoveryState {
   settings: SettingsState;
   currentInstance?: {
     name: string;
@@ -17,38 +63,8 @@ interface SettingsPageState {
     allowLanAccess: boolean;
     mdnsEnabled: boolean;
   };
-  updateStatus: string;
-  appVersion: string;
-  hasManagerUpdate: boolean | null;
-  configPath: string;
-  dataPath: string;
-  checkingUpdate: boolean;
-  showUninstallConfirm: boolean;
-  setShowUninstallConfirm: (value: boolean) => void;
   gatewayControlState: GatewayControlState;
   systemLoading: string | null;
-  backupStatus: string;
-  backupCommandOutput: string;
-  backupArchivePath: string;
-  backupOptions: BackupCreateOptions;
-  setBackupOptions: (value: BackupCreateOptions | ((prev: BackupCreateOptions) => BackupCreateOptions)) => void;
-  checkForUpdates: () => Promise<void>;
-  openDownloadUrl: () => Promise<void>;
-  uninstallOpenClaw: () => void;
-  openConfigDir: () => void;
-  previewBackupPlan: () => Promise<void>;
-  createBackupNow: () => Promise<void>;
-  verifyBackupNow: (archivePath?: string) => Promise<void>;
-  restoreBackupNow: (archivePath?: string) => Promise<void>;
-  onToggleWhitelist: () => void;
-  onToggleFileAccess: () => void;
-  onToggleLanAccess: () => void;
-  onToggleMdns: () => void;
-  onRunLanDiscovery: () => void;
-  onSaveLanDiscoveryResult: (candidate: LanDiscoveryCandidate) => void;
-  lanDiscoveryRunning: boolean;
-  lanDiscoveryStatus: string;
-  lanDiscoveryResults: LanDiscoveryCandidate[];
 }
 
 interface SettingsPageProps {
@@ -269,7 +285,7 @@ function BackupSection({
         setBackupOptions((prev) => ({ ...prev, output: selected }));
       }
     } catch (error) {
-      console.error("选择备份输出目录失败", error);
+      logger.error("选择备份输出目录失败", error);
     }
   };
 
@@ -286,7 +302,7 @@ function BackupSection({
         setBackupFilePath(selected);
       }
     } catch (error) {
-      console.error("选择备份文件失败", error);
+      logger.error("选择备份文件失败", error);
     }
   };
 

@@ -1,3 +1,5 @@
+import { logger } from "./logger";
+
 /**
  * 解析 OpenClaw CLI 输出中的 JSON
  * 自动跳过警告、装饰字符和 banner，找到第一个 '{' 开始解析
@@ -12,7 +14,7 @@ export function parseOpenClawJson<T = Record<string, unknown>>(output: string): 
   try {
     return JSON.parse(cleanOutput || "{}") as T;
   } catch (error) {
-    console.error("JSON parse error:", error, "raw output:", output);
+    logger.error("JSON parse error:", error, "raw output:", output);
     return {} as T;
   }
 }

@@ -3,8 +3,22 @@ import { parseOpenClawJson } from "../lib/cliOutputParser";
 import { isWebPreview } from "../lib/platform";
 import { dispatchToInstance, readFromInstance } from "./instanceCommandService";
 
+interface ProviderModelEntry {
+  id: string;
+  name?: string;
+  contextWindow?: number;
+  maxTokens?: number;
+}
+
+interface ProviderConfigEntry {
+  baseUrl?: string;
+  apiKey?: string;
+  api?: string;
+  models?: ProviderModelEntry[];
+}
+
 interface ModelsConfigPayload {
-  providers?: Record<string, any>;
+  providers?: Record<string, ProviderConfigEntry>;
 }
 
 export interface CurrentModelInfo {
@@ -118,7 +132,7 @@ export async function loadModelConfigs(instance?: AppInstance): Promise<ModelCon
   const configs: ModelConfig[] = [];
   if (config.providers) {
     for (const [providerName, providerConfig] of Object.entries(config.providers)) {
-      const pc = providerConfig as any;
+      const pc = providerConfig as ProviderConfigEntry;
       if (pc.models) {
         for (const model of pc.models) {
           configs.push({
@@ -247,7 +261,7 @@ export async function saveModelEdit(editingModel: ModelConfig, form: ModelFormSt
     apiKey: nextApiKey,
     api: existingProviderConfig?.api || "openai-completions",
     models: Array.isArray(existingProviderConfig?.models)
-      ? existingProviderConfig.models.map((model: any) =>
+      ? existingProviderConfig.models.map((model: ProviderModelEntry) =>
           model?.id === editingModel.id
             ? {
                 ...model,
@@ -283,7 +297,7 @@ export async function deleteModel(provider: string, modelId: string, instance?: 
   const config = await getParsedModelsConfig(instance);
   const providerConfig = config.providers?.[provider];
   const models = Array.isArray(providerConfig?.models) ? [...providerConfig.models] : [];
-  const nextModels = models.filter((item: any) => item?.id !== modelId);
+  const nextModels = models.filter((item: ProviderModelEntry) => item?.id !== modelId);
   if (nextModels.length === models.length) {
     throw new Error(`未找到模型 ${modelId}`);
   }
@@ -304,7 +318,7 @@ export async function moveModel(provider: string, modelId: string, direction: "u
   const config = await getParsedModelsConfig(instance);
   const providerConfig = config.providers?.[provider];
   const models = Array.isArray(providerConfig?.models) ? [...providerConfig.models] : [];
-  const index = models.findIndex((item: any) => item?.id === modelId);
+  const index = models.findIndex((item: ProviderModelEntry) => item?.id === modelId);
   if (index < 0) throw new Error(`未找到模型 ${modelId}`);
   const targetIndex = direction === "up" ? index - 1 : index + 1;
   if (targetIndex < 0 || targetIndex >= models.length) return;

@@ -11,7 +11,7 @@ const DOCKER_COMPOSE_TEMPLATE = `services:
     container_name: openclaw
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      - "18789:18789"
     environment:
       - NODE_ENV=production
     volumes:
@@ -23,7 +23,7 @@ const DOCKER_COMPOSE_TEMPLATE = `services:
 const DOCKER_RUN_TEMPLATE = `docker run -d \
   --name openclaw \
   --restart unless-stopped \
-  -p 3000:3000 \
+  -p 18789:18789 \
   -v "$PWD/openclaw/config:/root/.openclaw" \
   -v "$PWD/openclaw/workspace:/workspace" \
   -v "$PWD/openclaw/data:/data" \
@@ -34,7 +34,7 @@ const NAS_CHECKLIST = `NAS 部署建议：
 1. 映射配置目录到持久卷（如 /root/.openclaw）
 2. 映射 workspace 到独立持久卷
 3. 映射 data / logs 到可备份位置
-4. 若容器网络受限，优先显式映射 3000 端口
+4. 若容器网络受限，优先显式映射 18789 端口
 5. 先在 NAS 面板里确认卷权限，再连接 manager`;
 
 export function getInstallGuide(instance?: AppInstance): InstallGuide {

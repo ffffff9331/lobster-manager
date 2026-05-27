@@ -91,14 +91,10 @@ export async function installLocalNodeJs(): Promise<{ success: boolean; output: 
   };
 }
 
+/** 获取 Node.js LTS 安装包下载链接 */
 export function getNodeJsDownloadUrl(): string {
-  if (isWindows()) {
-    return "https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi";
-  }
-  if (isMacOS()) {
-    return "https://nodejs.org/dist/v20.11.0/node-v20.11.0.pkg";
-  }
-  return "https://nodejs.org/en/download/";
+  // 使用 Node.js 官方 LTS 版本页面，用户可自行选择合适的包
+  return "https://nodejs.org/en/download/prebuilt-installer";
 }
 
 export function getNodeJsInstallInstructions(): string[] {

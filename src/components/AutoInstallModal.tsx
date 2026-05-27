@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
+import { logger } from "../lib/logger";
 import { useAutoInstall } from "../hooks/useAutoInstall";
+import { GATEWAY_DEFAULT_PORT } from "../config/constants";
 import { getNodeJsDownloadUrl, getNodeJsInstallInstructions } from "../services/nodeJsCheckService";
 import { getDockerInstallInstructions, type InstallTarget } from "../services/dockerInstallService";
 import type { AppInstance } from "../types/core";
@@ -21,7 +23,7 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
         id: "temp-local",
         name: "本地",
         type: "local" as const,
-        baseUrl: "http://localhost:18789",
+        baseUrl: `http://localhost:${GATEWAY_DEFAULT_PORT}`,
         status: "unknown" as const,
         apiBasePath: "/api",
         healthPath: "/health",
@@ -40,7 +42,7 @@ export function AutoInstallModal({ open, currentInstance, onClose, onSuccess }: 
       setTimeout(onClose, 2000);
     },
     onError: (error) => {
-      console.error("安装失败:", error);
+      logger.error("安装失败:", error);
     },
   });
 

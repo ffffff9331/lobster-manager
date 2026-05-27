@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import type { AppInstance } from "../types/core";
 import { checkOpenClawInstalled, installOpenClaw, startOpenClawGateway } from "../services/openclawInstallService";
 import { checkNodeJs, installLocalNodeJs, type NodeJsStatus } from "../services/nodeJsCheckService";
+import { GATEWAY_DEFAULT_PORT } from "../config/constants";
 import { checkDockerEnvironment, installOpenClawWithDocker, type InstallTarget } from "../services/dockerInstallService";
 
 interface UseAutoInstallOptions {
@@ -68,7 +69,7 @@ export function useAutoInstall({ currentInstance, installTarget, dockerWorkDir, 
         }
 
         setInstallStatus("✅ OpenClaw Docker 容器启动已发起");
-        setInstallOutput(prev => `${prev}\n${result.output}\n\n容器地址: http://localhost:18789`);
+        setInstallOutput(prev => `${prev}\n${result.output}\n\n容器地址: http://localhost:${GATEWAY_DEFAULT_PORT}`);
         onSuccess?.();
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

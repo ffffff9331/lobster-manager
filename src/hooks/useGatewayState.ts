@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { logger } from "../lib/logger";
 import { formatActionError } from "../lib/errorMessage";
 import type { AppInstance, GatewayControlState, GatewayStatus } from "../types/core";
 import {
@@ -78,7 +79,7 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
         setGatewayControlState(controlState);
         setLiveLogs(logs);
       } catch (e) {
-        console.error("Failed to refresh gateway state after instance switch:", e);
+        logger.error("Failed to refresh gateway state after instance switch:", e);
       }
     })();
   }, [currentInstance]);
@@ -88,7 +89,7 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
       const status = await getGatewayStatus(currentInstance);
       setGatewayStatus(status);
     } catch (e) {
-      console.error("Failed to fetch gateway status:", e);
+      logger.error("Failed to fetch gateway status:", e);
       setGatewayStatus({ running: false });
     }
   }, [currentInstance]);
@@ -98,7 +99,7 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
       const output = await fetchGatewayLogs(currentInstance);
       setLiveLogs(output);
     } catch (e) {
-      console.error("Failed to fetch logs:", e);
+      logger.error("Failed to fetch logs:", e);
     }
   }, [currentInstance]);
 
@@ -107,7 +108,7 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
       const state = await getGatewayControlState(currentInstance);
       setGatewayControlState(state);
     } catch (e) {
-      console.error("Failed to fetch gateway control state:", e);
+      logger.error("Failed to fetch gateway control state:", e);
     }
   }, [currentInstance]);
 
@@ -194,7 +195,7 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
       await refreshGatewayAfterAction(action);
       return await readGatewayActionFeedback(action, dispatchMessage);
     } catch (e) {
-      console.error(`Gateway ${action} failed:`, e);
+      logger.error(`Gateway ${action} failed:`, e);
       alert(formatActionError(`Gateway ${action} 失败`, e));
       throw e;
     } finally {
@@ -209,7 +210,7 @@ export function useGatewayState({ currentInstance, setSystemLoading }: UseGatewa
       setGatewayStatus((prev) => ({ ...prev, uptime: message }));
       await refreshGatewayControlState();
     } catch (e) {
-      console.error(`Gateway LaunchAgent ${action} failed:`, e);
+      logger.error(`Gateway LaunchAgent ${action} failed:`, e);
       alert(formatActionError(`Gateway LaunchAgent ${action} 失败`, e));
     } finally {
       setSystemLoading(null);

@@ -1,3 +1,4 @@
+import { logger } from "../lib/logger";
 import type {
   AppInstance,
   CommandResultState,
@@ -38,7 +39,7 @@ export function loadCustomCommands(): CustomCommandItem[] {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
-    console.error("Failed to load custom commands:", e);
+    logger.error("Failed to load custom commands:", e);
     return [];
   }
 }

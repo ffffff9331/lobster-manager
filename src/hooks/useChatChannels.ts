@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { logger } from "../lib/logger";
 import { formatActionError } from "../lib/errorMessage";
 import { useAppStore } from "../stores/appStore";
 import type { ChatChannelInteractionProps } from "../types/chatChannels";
@@ -104,7 +105,7 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
         return nextChannels.find((channel) => channel.id === prev.id) ?? null;
       });
     } catch (e) {
-      console.error("Failed to load channels:", e);
+      logger.error("Failed to load channels:", e);
     }
   }, [currentInstance]);
 
@@ -119,7 +120,7 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
         detail: url,
       });
     } catch (e) {
-      console.error("Failed to open gateway:", e);
+      logger.error("Failed to open gateway:", e);
       alert(formatActionError("打开 Gateway 失败，请先确认 Gateway 已启动", e));
       recordAudit({
         action: "打开 Gateway 聊天",
@@ -195,7 +196,7 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
       try {
         await loadSelectedChannelConfig(channel);
       } catch (e) {
-        console.error(`Failed to load ${channel.id} config:`, e);
+        logger.error(`Failed to load ${channel.id} config:`, e);
       }
     },
     [loadSelectedChannelConfig, recordAudit],
@@ -226,7 +227,7 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
           detail: successMessage,
         });
       } catch (e) {
-        console.error("Failed to save config:", e);
+        logger.error("Failed to save config:", e);
         const message = formatActionError("保存失败", e);
         alert(message);
         recordAudit({
@@ -276,7 +277,7 @@ export function useChatChannels({ currentInstance, setSystemLoading }: UseChatCh
           detail: channel.runtimeSessionKey || channel.name,
         });
       } catch (e) {
-        console.error("Failed to toggle channel:", e);
+        logger.error("Failed to toggle channel:", e);
         const message = formatActionError("操作失败", e);
         alert(message);
         recordAudit({

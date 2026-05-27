@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { logger } from "../lib/logger";
 import { isLocalInstance } from "../lib/instanceCapabilities";
 import { canUseTauriInvoke } from "../lib/platform";
 import type { AppInstance } from "../types/core";
@@ -202,7 +203,7 @@ async function checkVersionUpdate(currentVersion: string, spec: VersionCheckSpec
       latestVersion: latestVersion ? `v${latestVersion}` : "",
     };
   } catch (e) {
-    console.error(`Failed to check ${spec.errorLabel} update:`, e);
+    logger.error(`Failed to check ${spec.errorLabel} update:`, e);
     return EMPTY_UPDATE_RESULT;
   }
 }
