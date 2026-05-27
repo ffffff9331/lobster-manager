@@ -108,6 +108,7 @@ function normalizeInstanceRecord(input: Partial<AppInstance> | null | undefined)
     isCurrent: Boolean(input.isCurrent),
     source: input.source || "manual",
     notes: input.notes || "",
+    tags: Array.isArray(input.tags) ? input.tags : [],
     apiBasePath: input.apiBasePath || "/",
     healthPath: input.healthPath || "/health",
     createdAt: input.createdAt || now(),
@@ -208,6 +209,7 @@ export interface CreateInstanceInput {
   status?: AppInstanceStatus;
   source?: AppInstanceSource;
   notes?: string;
+  tags?: string[];
   createdAt?: string;
 }
 

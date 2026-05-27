@@ -26,6 +26,7 @@ interface AddInstanceModalProps {
     apiBasePath: string;
     healthPath: string;
     notes: string;
+    tags: string[];
   }) => void;
 }
 
@@ -36,6 +37,7 @@ interface NewInstanceFormState {
   apiBasePath: string;
   healthPath: string;
   notes: string;
+  tags: string[];
 }
 
 const defaultFormState: NewInstanceFormState = {
@@ -45,6 +47,7 @@ const defaultFormState: NewInstanceFormState = {
   apiBasePath: "/",
   healthPath: "/health",
   notes: "",
+  tags: [],
 };
 
 export function AddInstanceModal({
@@ -100,6 +103,7 @@ export function AddInstanceModal({
       apiBasePath: form.apiBasePath.trim() || "/",
       healthPath: form.healthPath.trim() || "/health",
       notes: form.notes.trim(),
+      tags: form.tags,
     });
     reset();
   };
@@ -227,6 +231,15 @@ export function AddInstanceModal({
               onChange={(e) => setForm((prev) => ({ ...prev, healthPath: e.target.value }))}
               placeholder="/health"
             />
+          </div>
+          <div className="form-group">
+            <label>标签</label>
+            <input
+              value={form.tags.join(", ")}
+              onChange={(e) => setForm((prev) => ({ ...prev, tags: e.target.value.split(",").map(t => t.trim()).filter(Boolean) }))}
+              placeholder="用逗号分隔，如：生产, 测试"
+            />
+            <small>用逗号分隔多个标签</small>
           </div>
           <div className="form-group">
             <label>备注</label>

@@ -1,11 +1,14 @@
 import type { AppInstance } from "../types/core";
 
+import type { InstanceHealthState } from "../hooks/useInstanceHealthMonitor";
+
 interface InstanceSwitcherProps {
   instances: AppInstance[];
   currentInstanceId: string | null;
   onChange: (instanceId: string) => void;
   onRefreshStatuses: () => void;
   refreshingStatuses: boolean;
+  getInstanceHealth?: (instanceId: string) => InstanceHealthState;
 }
 
 const statusLabel: Record<AppInstance["status"], string> = {
@@ -26,6 +29,7 @@ export function InstanceSwitcher({
   onChange,
   onRefreshStatuses,
   refreshingStatuses,
+  getInstanceHealth,
 }: InstanceSwitcherProps) {
   const current = instances.find((item) => item.id === currentInstanceId) || instances[0];
 
@@ -52,7 +56,7 @@ export function InstanceSwitcher({
       >
         {instances.map((instance) => (
           <option key={instance.id} value={instance.id}>
-            {instance.name}（{statusLabel[instance.status]}）
+            {instance.name}（{getInstanceHealth ? (getInstanceHealth(instance.id).status === "online" ? "🟢" : getInstanceHealth(instance.id).status === "offline" ? "🔴" : "⚪") : ""} {statusLabel[instance.status]}）
           </option>
         ))}
       </select>

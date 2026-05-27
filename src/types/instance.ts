@@ -15,6 +15,7 @@ interface AppInstanceBase {
   isCurrent?: boolean;
   source?: AppInstanceSource;
   notes?: string;
+  tags?: string[];
   createdAt?: string;
   updatedAt?: string;
 }

@@ -18,6 +18,7 @@ interface CreateInstanceInput {
   apiBasePath: string;
   healthPath: string;
   notes: string;
+  tags: string[];
 }
 
 export function useInstanceSelection() {
