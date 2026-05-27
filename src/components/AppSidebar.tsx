@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import {
   Cpu,
+  Workflow,
   FileText,
   House,
   ListTodo,
@@ -14,7 +15,7 @@ import {
 import { InstanceSwitcher } from "./InstanceSwitcher";
 import type { AppInstance } from "../types/core";
 
-export type TabKey = "overview" | "chat" | "gateway" | "tasks" | "models" | "skills" | "doctor" | "applogs" | "settings";
+export type TabKey = "workflow" | "overview" | "chat" | "gateway" | "tasks" | "models" | "skills" | "doctor" | "applogs" | "settings";
 
 interface AppSidebarProps {
   activeTab: TabKey;
@@ -39,6 +40,7 @@ interface NavItem {
 }
 
 const staticNavItems: NavItem[] = [
+  { key: "workflow", label: "工作流", icon: Workflow, group: "core" },
   { key: "overview", label: "概览", icon: House, group: "core" },
   { key: "chat", label: "对话工具", icon: MessageSquare, group: "core" },
   { key: "doctor", label: "安装与修复", icon: Wrench, group: "manage" },

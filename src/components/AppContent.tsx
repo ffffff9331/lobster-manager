@@ -2,6 +2,7 @@ import { isMacOS } from "../lib/platform";
 import { useCallback, useMemo, useState } from "react";
 import { discoverLanInstances, type LanDiscoveryCandidate } from "../services/lanDiscoveryService";
 import { OverviewPage } from "../pages/OverviewPage";
+import { WorkflowPage } from "../pages/WorkflowPage";
 import { GatewayPage } from "../pages/GatewayPage";
 import { AppLogsPage } from "../pages/AppLogsPage";
 import { DoctorPage } from "../pages/DoctorPage";
@@ -83,6 +84,8 @@ export function AppContent({
   } = gatewayState;
 
   switch (activeTab) {
+    case "workflow":
+      return <WorkflowPage instance={currentInstance} onNavigate={setActiveTab} />;
     case "overview":
       return (
         <OverviewTabContent
