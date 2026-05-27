@@ -1,4 +1,5 @@
-import type { AppInstance, CommandResult, ModelConfig, ModelFormState } from "../types/core";
+import type { AppInstance, CommandResult, ModelFormState } from "../types/core";
+import type { ModelConfig } from "../types/model";
 import { parseOpenClawJson } from "../lib/cliOutputParser";
 import { isWebPreview } from "../lib/platform";
 import { dispatchToInstance, readFromInstance } from "./instanceCommandService";

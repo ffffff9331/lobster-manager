@@ -20,7 +20,7 @@ fn get_home_dir() -> String {
                     env::var("USERNAME").unwrap_or_else(|_| "user".into())
                 )
             } else {
-                "/Users/fan".into()
+                "/root".into()
             }
         })
 }

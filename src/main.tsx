@@ -15,5 +15,4 @@ root.render(
   </React.StrictMode>,
 );
 
-window.requestAnimationFrame(removeBootScreen);
 window.setTimeout(removeBootScreen, 300);
