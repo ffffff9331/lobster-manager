@@ -30,19 +30,19 @@ export function WorkflowPage({ instance, onNavigate }: WorkflowPageProps) {
       id: "configure" as WorkflowStepId,
       title: "配置",
       description: "配置模型和对话频道",
-      status: context.modelConfigured ? "completed" : currentStepIndex === 1 ? "active" : currentStepIndex > 1 ? "completed" : "pending",
+      status: context.modelConfigured ? "completed" : currentStepIndex === 1 ? "active" : currentStepIndex > 1 ? "skipped" : "pending",
     },
     {
       id: "deploy" as WorkflowStepId,
       title: "部署",
       description: "启动 Gateway 并验证连通性",
-      status: context.gatewayRunning ? "completed" : currentStepIndex === 2 ? "active" : currentStepIndex > 2 ? "completed" : "pending",
+      status: context.gatewayRunning ? "completed" : currentStepIndex === 2 ? "active" : currentStepIndex > 2 ? "skipped" : "pending",
     },
     {
       id: "monitor" as WorkflowStepId,
       title: "监控",
       description: "查看运行状态和日志",
-      status: context.healthOk ? "completed" : currentStepIndex === 3 ? "active" : currentStepIndex > 3 ? "completed" : "pending",
+      status: context.healthOk ? "completed" : currentStepIndex === 3 ? "active" : currentStepIndex > 3 ? "skipped" : "pending",
     },
     {
       id: "backup" as WorkflowStepId,

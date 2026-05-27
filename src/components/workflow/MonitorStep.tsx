@@ -43,7 +43,7 @@ export function MonitorStep({ instance, context, onUpdateContext, onComplete, on
     } finally {
       setLoading(false);
     }
-  }, [instance, onUpdateContext]);
+  }, [instance]);
 
   useEffect(() => {
     void refresh();

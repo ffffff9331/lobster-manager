@@ -28,7 +28,7 @@ export function ConfigureStep({ instance, context, onUpdateContext, onComplete, 
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [instance]);
+  }, [instance, onUpdateContext]);
 
   const hasModels = models.length > 0;
   const isComplete = hasModels;

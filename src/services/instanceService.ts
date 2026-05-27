@@ -225,6 +225,7 @@ export function createManualInstance(input: CreateInstanceInput): AppInstance {
     isCurrent: false,
     source: input.source || "manual",
     notes: input.notes || "",
+    tags: Array.isArray(input.tags) ? input.tags : [],
     apiBasePath: input.apiBasePath || "/",
     healthPath: input.healthPath || "/health",
     createdAt: input.createdAt || now(),

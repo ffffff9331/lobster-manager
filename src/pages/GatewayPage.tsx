@@ -61,7 +61,8 @@ export function GatewayPage({ gatewayState }: GatewayPageProps) {
     if (!liveLogs) return "";
     let lines = liveLogs.split("\n");
     if (logLevelFilter) {
-      lines = lines.filter(line => line.toLowerCase().includes(logLevelFilter.toLowerCase()));
+      const q = logLevelFilter.toLowerCase();
+      lines = lines.filter(line => { const l = line.toLowerCase(); return l.includes(`[`) ? l.includes(`[${q}]`) || l.includes(` ${q} `) : l.includes(q); });
     }
     if (logSearch.trim()) {
       const q = logSearch.trim().toLowerCase();

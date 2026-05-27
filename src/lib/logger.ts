@@ -6,7 +6,7 @@ type Level = "info" | "warn" | "error" | "debug";
 
 function emit(level: Level, ...args: unknown[]) {
   const prefix = "[openclaw-manager]";
-  const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.debug;
+  const fn = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
   fn(prefix, ...args);
 }
 

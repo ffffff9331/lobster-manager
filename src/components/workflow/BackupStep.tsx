@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { DatabaseBackup, Check, Loader2, Download } from "lucide-react";
-import { previewBackup, createBackup } from "../../services/backupService";
+import { createBackup } from "../../services/backupService";
 import type { AppInstance, BackupCreateOptions } from "../../types/core";
 import type { WorkflowContext } from "../../types/workflow";
 

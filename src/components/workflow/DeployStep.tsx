@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Rocket, Check, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import { testInstanceConnectivity, type ConnectivityResult } from "../../services/instanceConnectivityService";
 import { startOpenClawGateway } from "../../services/openclawInstallService";
@@ -34,6 +34,9 @@ export function DeployStep({ instance, context, onUpdateContext, onComplete }: D
     }
   }, [instance, onUpdateContext]);
 
+  const handleTestRef = useRef(handleTest);
+  handleTestRef.current = handleTest;
+
   const handleStartGateway = useCallback(async () => {
     if (!instance) return;
     setStarting(true);
@@ -42,7 +45,7 @@ export function DeployStep({ instance, context, onUpdateContext, onComplete }: D
       if (r.success) {
         onUpdateContext({ gatewayRunning: true });
         // 等一下再测试
-        setTimeout(() => void handleTest(), 2000);
+        setTimeout(() => void handleTestRef.current(), 2000);
       }
     } catch {
       // ignore

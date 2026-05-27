@@ -81,6 +81,9 @@ export function InstallStep({ instance, context, onUpdateContext, onComplete }: 
       setLog(prev => prev + "Gateway 启动成功 ✅\n");
     } else {
       setLog(prev => prev + `Gateway 启动未确认: ${startResult.error || ""}\n`);
+      // Gateway 启动不确定，不自动推进，让用户决定
+      setPhase("done");
+      return;
     }
 
     setPhase("done");
