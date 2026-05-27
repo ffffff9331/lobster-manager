@@ -156,7 +156,7 @@ export function getInstallGuide(instance?: AppInstance): InstallGuide {
       {
         label: "本地安装命令",
         description: "仅适用于本机实例。",
-        content: "npm install -g openclaw",
+        content: "npm install -g openclaw --registry https://registry.npmmirror.com",
       },
     ],
   };

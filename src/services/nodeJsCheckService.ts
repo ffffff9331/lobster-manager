@@ -1,11 +1,49 @@
 import { dispatchLocalCommand, readLocalCommand } from "./commandService";
 import { isWindows, isMacOS } from "../lib/platform";
+import { logger } from "../lib/logger";
 
 export interface NodeJsStatus {
   installed: boolean;
   version?: string;
   npmVersion?: string;
 }
+
+// ─── 国内镜像配置 ───
+
+const NPM_REGISTRY_CN = "https://registry.npmmirror.com";
+const NODE_MIRROR_CN = "https://npmmirror.com/mirrors/node";
+
+/** 检测当前 npm registry 是否已经是国内镜像 */
+async function isUsingCnMirror(): Promise<boolean> {
+  try {
+    const result = await readLocalCommand("npm config get registry");
+    if (!result.success) return false;
+    const registry = result.output.trim().toLowerCase();
+    return registry.includes("npmmirror.com") || registry.includes("taobao.org") || registry.includes("registry.npmmirror");
+  } catch {
+    return false;
+  }
+}
+
+/** 设置 npm 使用国内镜像 */
+export async function setupNpmMirror(): Promise<{ success: boolean; output: string }> {
+  if (await isUsingCnMirror()) {
+    return { success: true, output: "npm 已使用国内镜像" };
+  }
+  const result = await dispatchLocalCommand(`npm config set registry ${NPM_REGISTRY_CN}`);
+  if (result.success) {
+    logger.info("npm registry 已切换到国内镜像:", NPM_REGISTRY_CN);
+    return { success: true, output: `npm registry 已切换到 ${NPM_REGISTRY_CN}` };
+  }
+  return { success: false, output: result.error || "切换 npm 镜像失败" };
+}
+
+/** 获取当前 npm registry 用于安装命令的 --registry 参数 */
+export function getNpmRegistryArg(): string {
+  return `--registry ${NPM_REGISTRY_CN}`;
+}
+
+// ─── Node.js 检测 ───
 
 function parseNodeStatus(nodeOutput: string, npmOutput: string): NodeJsStatus {
   const nodeVersion = nodeOutput.trim();
@@ -33,55 +71,25 @@ export async function checkNodeJs(): Promise<NodeJsStatus> {
   }
 }
 
+// ─── Node.js 安装（国内优先）───
 
 export async function installLocalNodeJs(): Promise<{ success: boolean; output: string; error?: string }> {
   const current = await checkNodeJs();
   if (current.installed) {
+    // Node 已装，确保 npm 镜像也配好
+    await setupNpmMirror();
     return {
       success: true,
-      output: `Node.js ${current.version || ""} / npm ${current.npmVersion || ""} 已安装`,
+      output: `Node.js ${current.version || ""} / npm ${current.npmVersion || ""} 已安装，npm 镜像已配置`,
     };
   }
 
   if (isWindows()) {
-    const wingetResult = await dispatchLocalCommand(
-      "winget install --id OpenJS.NodeJS.LTS -e --source winget --accept-package-agreements --accept-source-agreements",
-    );
-    if (!wingetResult.success) {
-      return {
-        success: false,
-        output: wingetResult.output,
-        error: wingetResult.error || "Node.js 自动安装失败：未能通过 winget 安装 OpenJS.NodeJS.LTS",
-      };
-    }
-    return {
-      success: true,
-      output: wingetResult.output || "Node.js 安装命令已执行完成；如仍检测不到，请重启 OpenClaw Manager。",
-    };
+    return installNodeWindows();
   }
 
   if (isMacOS()) {
-    const brewResult = await readLocalCommand("brew --version");
-    if (!brewResult.success) {
-      return {
-        success: false,
-        output: brewResult.output,
-        error: "未检测到 Homebrew，无法自动安装 Node.js；请先安装 Homebrew 或使用 Node.js pkg 安装包。",
-      };
-    }
-
-    const installResult = await dispatchLocalCommand("brew install node");
-    if (!installResult.success) {
-      return {
-        success: false,
-        output: installResult.output,
-        error: installResult.error || "Node.js 自动安装失败：brew install node 执行失败",
-      };
-    }
-    return {
-      success: true,
-      output: installResult.output || "Node.js 安装命令已执行完成。",
-    };
+    return installNodeMacos();
   }
 
   return {
@@ -91,19 +99,88 @@ export async function installLocalNodeJs(): Promise<{ success: boolean; output: 
   };
 }
 
-/** 获取 Node.js LTS 安装包下载链接 */
+async function installNodeWindows(): Promise<{ success: boolean; output: string; error?: string }> {
+  let output = "";
+
+  // 方案 1：winget（国内一般可用）
+  const wingetResult = await dispatchLocalCommand(
+    "winget install --id OpenJS.NodeJS.LTS -e --source winget --accept-package-agreements --accept-source-agreements",
+  );
+  if (wingetResult.success) {
+    output += wingetResult.output || "Node.js 安装完成\n";
+    // 设置国内 npm 镜像
+    const mirrorResult = await setupNpmMirror();
+    output += mirrorResult.output + "\n";
+    return { success: true, output };
+  }
+
+  // 方案 2：winget 失败，尝试直接下载 MSI（用国内镜像）
+  output += "winget 安装失败，尝试从国内镜像下载...\n";
+  const msiUrl = `${NODE_MIRROR_CN}/latest-v20.x/node-v20-lts-x64.msi`;
+  const msiResult = await dispatchLocalCommand(
+    `powershell -Command "Invoke-WebRequest -Uri '${msiUrl}' -OutFile '$env:TEMP\\node-lts.msi'; Start-Process msiexec.exe -ArgumentList '/i','$env:TEMP\\node-lts.msi','/quiet','/norestart' -Wait"`,
+  );
+  if (msiResult.success) {
+    output += "Node.js MSI 安装完成\n";
+    const mirrorResult = await setupNpmMirror();
+    output += mirrorResult.output + "\n";
+    return { success: true, output };
+  }
+
+  return {
+    success: false,
+    output,
+    error: `Node.js 自动安装失败。\nwinget 错误: ${wingetResult.error || wingetResult.output}\nMSI 错误: ${msiResult.error || msiResult.output}\n\n请手动从 https://npmmirror.com/mirrors/node 下载安装 Node.js 20 LTS。`,
+  };
+}
+
+async function installNodeMacos(): Promise<{ success: boolean; output: string; error?: string }> {
+  let output = "";
+
+  // 方案 1：Homebrew
+  const brewResult = await readLocalCommand("brew --version");
+  if (brewResult.success) {
+    const installResult = await dispatchLocalCommand("brew install node");
+    if (installResult.success) {
+      output += installResult.output || "Node.js 安装完成\n";
+      const mirrorResult = await setupNpmMirror();
+      output += mirrorResult.output + "\n";
+      return { success: true, output };
+    }
+    output += `brew install node 失败: ${installResult.error || installResult.output}\n`;
+  } else {
+    output += "未检测到 Homebrew\n";
+  }
+
+  // 方案 2：Homebrew 不可用，提示手动安装
+  return {
+    success: false,
+    output,
+    error: "macOS 自动安装需要 Homebrew。请先安装 Homebrew（https://brew.sh），或从 https://npmmirror.com/mirrors/node 手动下载 Node.js 20 LTS。",
+  };
+}
+
+// ─── 下载链接和指引 ───
+
+/** 获取 Node.js 下载链接（国内镜像优先） */
 export function getNodeJsDownloadUrl(): string {
-  // 使用 Node.js 官方 LTS 版本页面，用户可自行选择合适的包
-  return "https://nodejs.org/en/download/prebuilt-installer";
+  if (isWindows()) {
+    return `${NODE_MIRROR_CN}/latest-v20.x/node-v20-lts-x64.msi`;
+  }
+  if (isMacOS()) {
+    return `${NODE_MIRROR_CN}/latest-v20.x/node-v20-lts-arm64.pkg`;
+  }
+  return `${NODE_MIRROR_CN}/`;
 }
 
 export function getNodeJsInstallInstructions(): string[] {
   if (isWindows()) {
     return [
-      "1. 下载 Node.js 安装包",
+      "1. 从国内镜像下载 Node.js：",
+      `   ${NODE_MIRROR_CN}/latest-v20.x/node-v20-lts-x64.msi`,
       "2. 双击运行安装程序",
       "3. 按照向导完成安装",
-      "4. 重启 openclaw manager",
+      "4. 安装完成后，npm 会自动配置国内镜像",
     ];
   }
 
@@ -112,10 +189,11 @@ export function getNodeJsInstallInstructions(): string[] {
       "方法 1 - 使用 Homebrew（推荐）：",
       "  brew install node",
       "",
-      "方法 2 - 下载安装包：",
-      "  1. 下载 Node.js 安装包",
-      "  2. 双击 .pkg 文件安装",
-      "  3. 重启 openclaw manager",
+      "方法 2 - 从国内镜像下载安装包：",
+      `   ${NODE_MIRROR_CN}/latest-v20.x/node-v20-lts-arm64.pkg`,
+      "   双击 .pkg 文件安装",
+      "",
+      "安装完成后，npm 会自动配置国内镜像",
     ];
   }
 
@@ -125,8 +203,7 @@ export function getNodeJsInstallInstructions(): string[] {
     "  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -",
     "  sudo apt-get install -y nodejs",
     "",
-    "  # CentOS/RHEL",
-    "  curl -fsSL https://rpm.nodesource.com/setup_20.x | sudo bash -",
-    "  sudo yum install -y nodejs",
+    "  # 或使用国内镜像手动安装",
+    `  ${NODE_MIRROR_CN}/`,
   ];
 }

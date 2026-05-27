@@ -1,4 +1,5 @@
 import { isWindows } from "../lib/platform";
+import { getNpmRegistryArg } from "./nodeJsCheckService";
 import type { AppInstance, CommandResult } from "../types/core";
 import { dispatchLocalCommand } from "./commandService";
 import { dispatchToInstance, readFromInstance } from "./instanceCommandService";
@@ -7,7 +8,7 @@ import { controlGateway } from "./gatewayService";
 const NO_INSTANCE_INSTALL_MESSAGE = "请先选择要操作的实例，安装/卸载操作不再默认回退到本机 local。";
 
 function getInstallCommand(): string {
-  return "npm install -g openclaw@latest";
+  return `npm install -g openclaw@latest ${getNpmRegistryArg()}`;
 }
 
 function getRemoveDataCommand(instance?: AppInstance): string {
